@@ -109,6 +109,11 @@ def build_report(frame):
     # --- 3. N-duyarlilik skoru (Bolum 6) ---
     lines.append('\n## 3. N-Duyarlilik Skoru (Bolum 6)\n')
     lines.append('`|N=5 degeri − N=3 degeri| / N=3 degeri`, kombinasyon basina.\n')
+    lines.append(
+        '`-` isareti, N=3 degerinin SIFIR oldugunu ve oransal degisimin tanimsiz '
+        'kaldigini gosterir. Bu kendi basina bir bulgudur: metrik N=3\'te hic '
+        'hareket etmiyor, N=5\'te ediyor (orn. churn orani -- takas mekanizmasi '
+        'N=3\'te hic tetiklenmiyor).\n')
     lines.append(_format_table(ofat.n_sensitivity(frame)))
 
     # --- 4. Etkisiz eksenler ---
