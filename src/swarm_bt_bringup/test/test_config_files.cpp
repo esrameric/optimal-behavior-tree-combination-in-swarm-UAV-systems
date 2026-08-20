@@ -36,7 +36,7 @@ TEST(ConfigFiles, SablonBaselineKombinasyonunuTanimlar)
   EXPECT_EQ(config.experimentId(), "P2c_P3c_P4b_P5abc_P6c_N3");
   EXPECT_EQ(config.n_agents, 3);
   EXPECT_DOUBLE_EQ(config.sim.area_side, 400.0);
-  EXPECT_DOUBLE_EQ(config.swap_threshold, 0.20);
+  EXPECT_DOUBLE_EQ(config.swap_threshold, 0.10);
   EXPECT_EQ(config.repetitions, 10);
 }
 

@@ -1,4 +1,4 @@
-// r_comm (iletisim menzili) kalibrasyon taramasi - plan Bolum 1.
+// r_comm (iletisim menzili) kalibrasyon taramasi - plan Bolum 1 ve Bolum 5/Faz 0.
 //
 // Gorev alani sabit tutulurken r_comm degistirilir ve her deger icin N=3 ve N=5
 // koşulur; cikti CSV olarak yazilir. Amac, plandaki "karsilasmalarin cok seyrek
@@ -12,44 +12,13 @@
 #include <string>
 #include <vector>
 
-#include <swarm_bt_core/encounter_detector.hpp>
-#include <swarm_bt_core/mission_area.hpp>
-#include <swarm_bt_core/swarm_state.hpp>
+#include <swarm_bt_core/experiment_config.hpp>
+#include <swarm_bt_core/parameter_space.hpp>
 
-#include "swarm_bt_sim/kinematic_sim.hpp"
+#include "swarm_bt_sim/episode_runner.hpp"
 
 namespace
 {
-
-struct RunResult
-{
-  int encounters{0};
-  double mission_time{0.0};
-  bool coverage_complete{false};
-};
-
-RunResult runOnce(
-  double area_side, double cell_size, int n_agents, double r_comm,
-  double jitter, int seed)
-{
-  const swarm_bt_core::MissionArea area(area_side, area_side, cell_size);
-  swarm_bt_core::SwarmState state(area, n_agents, 0.01);
-  state.assignEqualStrips();
-
-  swarm_bt_sim::KinematicSimConfig config;
-  config.speed_jitter = jitter;
-  config.seed = seed;
-
-  swarm_bt_core::EncounterDetector detector(r_comm);
-  swarm_bt_sim::KinematicSim sim(state, config);
-
-  while (!sim.finished()) {
-    sim.step();
-    detector.update(state);
-  }
-
-  return RunResult{detector.totalEncounters(), state.time(), state.coverageComplete()};
-}
 
 double mean(const std::vector<double> & values)
 {
@@ -76,28 +45,29 @@ double stddev(const std::vector<double> & values)
 
 int main(int argc, char ** argv)
 {
-  double area_side = 400.0;
-  double cell_size = 20.0;
-  double jitter = 0.05;
   int repetitions = 10;
-  std::vector<int> agent_counts = {3, 5};
+  bool with_failure = true;
+  auto base = swarm_bt_core::baselineConfig();
 
   const std::map<std::string, std::function<void(const std::string &)>> handlers = {
-    {"--area", [&](const std::string & v) {area_side = std::stod(v);}},
-    {"--cell", [&](const std::string & v) {cell_size = std::stod(v);}},
-    {"--jitter", [&](const std::string & v) {jitter = std::stod(v);}},
     {"--repetitions", [&](const std::string & v) {repetitions = std::stoi(v);}},
+    {"--area", [&](const std::string & v) {base.sim.area_side = std::stod(v);}},
+    {"--cell", [&](const std::string & v) {base.sim.cell_size = std::stod(v);}},
+    {"--jitter", [&](const std::string & v) {base.sim.speed_jitter = std::stod(v);}},
   };
 
   try {
     for (int i = 1; i < argc; ++i) {
       const std::string flag = argv[i];
       if (flag == "--help") {
-        std::cout
-          << "Kullanim: " << argv[0]
-          << " [--area <m>] [--cell <m>] [--jitter <0..1>] [--repetitions <n>]\n"
-          << "CSV stdout'a yazilir.\n";
+        std::cout << "Kullanim: " << argv[0]
+                  << " [--repetitions <n>] [--area <m>] [--cell <m>] [--jitter <0..1>]"
+                  << " [--no-failure]\nCSV stdout'a yazilir.\n";
         return 0;
+      }
+      if (flag == "--no-failure") {
+        with_failure = false;
+        continue;
       }
       const auto handler = handlers.find(flag);
       if (handler == handlers.end() || i + 1 >= argc) {
@@ -107,31 +77,46 @@ int main(int argc, char ** argv)
       handler->second(argv[++i]);
     }
 
+    base.failure.enabled = with_failure;
+    base.failure.time = -1.0;
+    base.failure.agent_id = -1;
+
     std::cout << "r_comm,r_comm_orani,N,karsilasma_ort,karsilasma_std,"
-              << "gorev_suresi_ort,kapsama_tamam_orani,tekrar\n";
+              << "koordinasyon_karari_ort,takas_ort,gorev_suresi_ort,gorev_suresi_std,"
+              << "kapsama_tamam_orani,tekrar\n";
     std::cout << std::fixed << std::setprecision(4);
 
     // Alan kenar uzunlugunun %2.5'inden %50'sine kadar tara; plandaki oneri
-    // araligi (%10-20) bunun icinde kalir, disina da bakip egriyi gorurüz.
+    // araligi (%10-20) bunun icinde kalir, disina da bakip egriyi goruruz.
     for (int percent = 25; percent <= 500; percent += 25) {
       const double ratio = percent / 1000.0;
-      const double r_comm = area_side * ratio;
-      for (const int n : agent_counts) {
+      auto config = base;
+      config.r_comm = base.sim.area_side * ratio;
+      config.sim.safety_radius = std::min(5.0, config.r_comm / 2.0);
+
+      for (const int n : swarm_bt_core::scaleValues()) {
+        config.n_agents = n;
         std::vector<double> encounters;
+        std::vector<double> decisions;
+        std::vector<double> swaps;
         std::vector<double> times;
         int completed = 0;
         for (int seed = 0; seed < repetitions; ++seed) {
-          const auto result = runOnce(area_side, cell_size, n, r_comm, jitter, seed);
-          encounters.push_back(result.encounters);
-          times.push_back(result.mission_time);
-          completed += result.coverage_complete ? 1 : 0;
+          const auto metrics = swarm_bt_sim::EpisodeRunner(config, seed).run();
+          encounters.push_back(metrics.encounters);
+          decisions.push_back(metrics.coordination_events);
+          swaps.push_back(metrics.swaps);
+          times.push_back(metrics.mission_time);
+          completed += metrics.coverage_complete ? 1 : 0;
         }
-        std::cout << r_comm << "," << ratio << "," << n << ","
+        std::cout << config.r_comm << "," << ratio << "," << n << ","
                   << mean(encounters) << "," << stddev(encounters) << ","
-                  << mean(times) << ","
+                  << mean(decisions) << "," << mean(swaps) << ","
+                  << mean(times) << "," << stddev(times) << ","
                   << static_cast<double>(completed) / repetitions << ","
                   << repetitions << "\n";
       }
+      std::cerr << "tamamlandi: r_comm=" << config.r_comm << "\n";
     }
   } catch (const std::exception & error) {
     std::cerr << "Hata: " << error.what() << "\n";

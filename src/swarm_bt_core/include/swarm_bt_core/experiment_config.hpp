@@ -128,11 +128,13 @@ struct ExperimentConfig
   /// Karsilasma tespitinde cikis esigi carpani (bkz. EncounterDetector).
   /// Sifirlanirsa esige teget gecen mesafe egrisi sahte karsilasma yagmuru uretir.
   double encounter_hysteresis{0.1};
-  /// esik_degeri: dengesizlik takas esigi [0,1]. Bolum 2.2'de kalibre edildi.
-  /// Planin onerdigi 0.30 calisma bandinin DISINDA cikti (takas mekanizmasini
-  /// kapatiyor); band %5-25, secilen deger %20.
-  /// Gerekce ve tarama verisi: experiments/calibration_threshold.md
-  double swap_threshold{0.20};
+  /// esik_degeri: dengesizlik takas esigi [0,1].
+  ///
+  /// Bolum 5/Faz 0'da BT karar katmani ve sutun granulerlikli takas ile YENIDEN
+  /// kalibre edildi: 0.20 -> 0.10. Planin onerdigi 0.30 ve ilk kalibrasyondaki
+  /// 0.20, takas etkinligini duşuruyor.
+  /// Gerekce ve tarama verisi: experiments/calibration_threshold_bt.md
+  double swap_threshold{0.10};
 
   CoordinationArchitecture p2{CoordinationArchitecture::kDistributed};
   AllocationAlgorithm p3{AllocationAlgorithm::kCbba};

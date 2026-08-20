@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <unordered_set>
@@ -101,30 +102,54 @@ std::optional<SwapProposal> AreaSwapNegotiator::buildProposal(
   const int proposer = a_has_more ? agent_a : agent_b;
   const int receiver = a_has_more ? agent_b : agent_a;
 
-  auto proposer_cells = state.remainingCellIds(proposer);
-  if (proposer_cells.empty()) {
+  // Devir birimi TAM SUTUNDUR, tek tek hucre degil.
+  //
+  // Gerekce (olculdu): bicerdover taramada tek tuk hucre devretmek aliciyi yeni
+  // bir sutuna sapmaya zorlarken teklif edenin zaten gececegi yoldan neredeyse
+  // hicbir sey eksiltmez -- ortalama fayda -333 m cikiyor ve HICBIR takas kabul
+  // edilmiyordu. Tam sutun devredildiginde teklif eden o sutuna hic ugramaz;
+  // kazanc gercek olur ve fayda olcutu anlamli bir karar verebilir. Ayrica
+  // P3 tahsis algoritmalari da sutun granulerliginde calisir.
+  const auto & area = state.area();
+  std::map<int, std::vector<int>> proposer_columns;
+  for (const int cell_id : state.remainingCellIds(proposer)) {
+    proposer_columns[area.colOf(cell_id)].push_back(cell_id);
+  }
+  if (proposer_columns.empty()) {
     return std::nullopt;
   }
 
-  // Ikiliyi dengeleyecek hucre sayisi: farkin yarisi.
-  const int difference = state.remainingCells(proposer) - state.remainingCells(receiver);
-  const int transfer_count =
-    std::min(static_cast<int>(proposer_cells.size()), std::max(1, difference / 2));
-
-  // Aliciya EN YAKIN hucreler devredilir: takasin mesafe kazanci buradan gelir.
+  // Sutunlari aliciya yakinliga gore sirala.
   const Vec2 receiver_position = state.agent(receiver).position;
-  std::partial_sort(
-    proposer_cells.begin(), proposer_cells.begin() + transfer_count, proposer_cells.end(),
-    [&state, &receiver_position](int lhs, int rhs) {
-      return distance(receiver_position, state.area().cellCenter(lhs)) <
-      distance(receiver_position, state.area().cellCenter(rhs));
+  std::vector<int> columns;
+  columns.reserve(proposer_columns.size());
+  for (const auto & entry : proposer_columns) {
+    columns.push_back(entry.first);
+  }
+  std::sort(
+    columns.begin(), columns.end(),
+    [&area, &receiver_position](int lhs, int rhs) {
+      const double lhs_x = (lhs + 0.5) * area.cellSize();
+      const double rhs_x = (rhs + 0.5) * area.cellSize();
+      return std::abs(receiver_position.x - lhs_x) < std::abs(receiver_position.x - rhs_x);
     });
+
+  // Devredilecek sutun sayisi: ikiliyi dengeleyecek kadar.
+  const int difference = state.remainingCells(proposer) - state.remainingCells(receiver);
+  const int rows = std::max(1, area.rows());
+  const int transfer_columns = std::min(
+    static_cast<int>(columns.size()), std::max(1, difference / (2 * rows)));
 
   SwapProposal proposal;
   proposal.proposer_id = proposer;
   proposal.receiver_id = receiver;
-  proposal.offered_cells.assign(
-    proposer_cells.begin(), proposer_cells.begin() + transfer_count);
+  for (int i = 0; i < transfer_columns; ++i) {
+    const auto & cells = proposer_columns[columns[static_cast<std::size_t>(i)]];
+    proposal.offered_cells.insert(proposal.offered_cells.end(), cells.begin(), cells.end());
+  }
+  if (proposal.offered_cells.empty()) {
+    return std::nullopt;
+  }
 
   proposal.proposer_gain =
     tourLength(state, proposer) - tourLengthWithout(state, proposer, proposal.offered_cells);

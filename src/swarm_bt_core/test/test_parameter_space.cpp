@@ -113,7 +113,7 @@ TEST(ParameterSpace, BaselineKalibreEdilmisDegerleriKullanir)
 {
   const auto baseline = swarm_bt_core::baselineConfig();
   EXPECT_DOUBLE_EQ(baseline.r_comm, 60.0);          // Bolum 1
-  EXPECT_DOUBLE_EQ(baseline.swap_threshold, 0.20);  // Bolum 2.2
+  EXPECT_DOUBLE_EQ(baseline.swap_threshold, 0.10);  // Bolum 5/Faz 0 (yeniden kalibre)
 }
 
 TEST(ParameterSpace, OfatEksenleriP4uIcermez)
