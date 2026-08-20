@@ -27,6 +27,8 @@ setup(
         'console_scripts': [
             'ofat_report = swarm_bt_analysis.report_ofat:main',
             'metrics_table = swarm_bt_analysis.metrics_table:main',
+            'select_finalists = swarm_bt_analysis.finalists:main',
+            'phase_comparison = swarm_bt_analysis.phase_comparison:main',
         ],
     },
 )

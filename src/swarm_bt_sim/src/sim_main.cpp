@@ -35,6 +35,7 @@ void printUsage(const char * program)
     << "  --failure-time <s>    ariza zamani; negatifse gorev ortasi (kapsama %50)\n"
     << "  --failure-agent <id>  arizalanacak drone; negatifse rastgele\n"
     << "  --seed <int>          rastgelelik tohumu\n"
+    << "  --print-launch-positions  ajanlarin kalkis konumlarini yazip cik\n"
     << "  --help                bu yardimi goster\n";
 }
 
@@ -44,6 +45,7 @@ int main(int argc, char ** argv)
 {
   swarm_bt_core::ExperimentConfig config;
   int seed = 0;
+  bool print_launch_positions = false;
 
   // --config once islenmeli ki diger secenekler onun uzerine yazabilsin.
   for (int i = 1; i + 1 < argc; ++i) {
@@ -92,6 +94,10 @@ int main(int argc, char ** argv)
         config.failure.enabled = true;
         continue;
       }
+      if (flag == "--print-launch-positions") {
+        print_launch_positions = true;
+        continue;
+      }
       const auto handler = handlers.find(flag);
       if (handler == handlers.end()) {
         std::cerr << "Bilinmeyen secenek: " << flag << "\n";
@@ -105,6 +111,18 @@ int main(int argc, char ** argv)
     }
 
     config.validate();
+
+    if (print_launch_positions) {
+      // Faz 2'de Gazebo dunyasi, ajanlari Faz 1 ile AYNI konumlara yerlestirmek
+      // icin bu ciktiyi kullanir. Iki fazin ayni kalkis geometrisinden
+      // baslamasi, plan Bolum 5/Faz 2'deki karsilastirmanin on kosulu.
+      const auto state = swarm_bt_core::makeSwarmState(config, seed);
+      for (const auto & agent : state.agents()) {
+        std::cout << agent.position.x << " " << agent.position.y << "\n";
+      }
+      return 0;
+    }
+
     swarm_bt_sim::EpisodeRunner runner(config, seed);
     const auto metrics = runner.run();
     const auto & state = runner.state();

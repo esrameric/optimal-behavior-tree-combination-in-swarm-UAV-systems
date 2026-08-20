@@ -14,7 +14,10 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/btcpp_prefix_fix.cmake" OPTIONA
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
 find_package(swarm_bt_core REQUIRED)
+find_package(swarm_bt_msgs REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/kinematic_sim.cpp
@@ -39,6 +42,11 @@ target_link_libraries(calibrate_threshold ${PROJECT_NAME})
 add_executable(ofat_sweep src/ofat_sweep_main.cpp)
 target_link_libraries(ofat_sweep ${PROJECT_NAME})
 
+# Faz 2 - Gazebo destekli koşu dugumu (rclcpp).
+add_executable(gazebo_swarm_node src/gazebo_swarm_node.cpp)
+target_link_libraries(gazebo_swarm_node ${PROJECT_NAME})
+ament_target_dependencies(gazebo_swarm_node rclcpp geometry_msgs swarm_bt_msgs)
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
@@ -46,7 +54,7 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep
+install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep gazebo_swarm_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)

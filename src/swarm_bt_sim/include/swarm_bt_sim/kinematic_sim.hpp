@@ -5,6 +5,8 @@
 
 #include <swarm_bt_core/swarm_state.hpp>
 
+#include "swarm_bt_sim/position_source.hpp"
+
 namespace swarm_bt_sim
 {
 
@@ -38,7 +40,7 @@ struct KinematicSimConfig
 ///
 /// Comm-range giris tespiti bilincli olarak burada degil, swarm_bt_core
 /// icindeki EncounterDetector'dadir: ayni kod Faz 2'de (Gazebo) de kullanilir.
-class KinematicSim
+class KinematicSim : public IPositionSource
 {
 public:
   KinematicSim(swarm_bt_core::SwarmState & state, const KinematicSimConfig & config);
@@ -48,12 +50,12 @@ public:
   ///
   /// Hedefi kim secer: BT (ScanNextCell dugumu). Bu sinif yalnizca ucus
   /// katmanidir; hedefi olmayan ajan yerinde bekler.
-  void step();
+  void step() override;
 
   /// Kapsama tamamlandi veya zaman siniri asildi.
-  bool finished() const;
+  bool finished() const override;
 
-  int tickCount() const {return tick_count_;}
+  int tickCount() const override {return tick_count_;}
   const KinematicSimConfig & config() const {return config_;}
 
 private:

@@ -14,6 +14,7 @@
 
 #include "swarm_bt_sim/bt_swarm_controller.hpp"
 #include "swarm_bt_sim/kinematic_sim.hpp"
+#include "swarm_bt_sim/position_source.hpp"
 
 namespace swarm_bt_sim
 {
@@ -98,13 +99,37 @@ class EpisodeRunner
 {
 public:
   /// \param bt_xml_dir BT XML dizini; bos birakilirsa kurulu paketten bulunur.
+  ///
+  /// Bu kurucu Faz 1 hafif kinematik simulatorunu pozisyon kaynagi olarak kurar.
   explicit EpisodeRunner(
     const swarm_bt_core::ExperimentConfig & config, int seed,
     const std::string & bt_xml_dir = "");
+
+  /// Pozisyon kaynagi disaridan verilen kurucu (Faz 2: Gazebo).
+  ///
+  /// Plan Bolum 7: karar mantigi ayni kalir, yalnizca konumlarin kaynagi
+  /// degisir. \p source, durum nesnesine referans tuttugu icin bu nesneden
+  /// once yok edilmemelidir.
+  EpisodeRunner(
+    const swarm_bt_core::ExperimentConfig & config, int seed,
+    const std::string & bt_xml_dir,
+    std::unique_ptr<IPositionSource> source);
+
   ~EpisodeRunner();
 
   /// Koşuyu bitene kadar calistirir ve metrikleri dondurur.
   EpisodeMetrics run();
+
+  /// Tek bir tick ilerletir (ROS2 zamanlayicisindan surulmek icin).
+  void step();
+
+  /// Koşu bitti mi.
+  bool finished() const;
+
+  /// O ana kadar toplanan metrikleri sonlandirir ve dondurur.
+  EpisodeMetrics finalize();
+
+  swarm_bt_core::SwarmState & mutableState() {return state_;}
 
   const swarm_bt_core::SwarmState & state() const {return state_;}
   const swarm_bt_core::ExperimentConfig & config() const {return config_;}
@@ -147,7 +172,7 @@ private:
   swarm_bt_core::EncounterDetector proximity_monitor_;
   swarm_bt_core::AreaSwapNegotiator negotiator_;
   swarm_bt_core::FailureInjector failure_injector_;
-  std::unique_ptr<KinematicSim> sim_;
+  std::unique_ptr<IPositionSource> sim_;
   std::unique_ptr<BtSwarmController> controller_;
   EpisodeMetrics metrics_;
 };

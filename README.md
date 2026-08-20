@@ -287,3 +287,51 @@ de mümkün kılar (plan Bölüm 7).
    mevcut tarama konumundan önceye hücre düşebiliyor. Ölçülen sonuç: bir koşuda
    tam olarak 1 hücre erişilemez kalıyor, kapsama hiçbir zaman tamamlanmıyor ve
    koşu 3000 s zaman sınırına dayanıyordu. Arama artık **sarmalanıyor**.
+
+### V18 — Faz 2'de PX4 SITL uçuş yığını kullanılmadı
+Plan Bölüm 5/Faz 2 "Gazebo+SITL" diyor. Gazebo Harmonic ve PX4-Autopilot bu
+makinede kurulu ve derlenmiş durumda, ancak PX4'ü ROS2'den **offboard**
+sürmek için gereken `px4_msgs` paketi ve uXRCE-DDS ajanı kurulu değil; bunları
+kurup entegre etmek bu çalışmanın kapsamına göre orantısız bir iş.
+
+Faz 2 bunun yerine **Gazebo fiziğiyle, hız kontrollü gövdelerle** kuruldu:
+gövdeler `VelocityControl` eklentisiyle sürülüyor, konumlar `PosePublisher` ile
+yayınlanıyor, `ros_gz_bridge` üzerinden ROS2'ye geçiyor. Elde edilen şey planın
+Bölüm 7'de asıl istediği şeydir: **aynı BT kodu, farklı pozisyon kaynağı.**
+BT ağaçları, negotiation alt-ağacı, karşılaşma tespiti ve tüm metrik tanımları
+Faz 1 ile birebir aynı; değişen tek şey `IPositionSource` gerçekleştirimi.
+
+Eksik olan, PX4'ün uçuş dinamiği (ivme limitleri, tutum kontrolü, rüzgâr).
+Bu, `IPositionSource` arkasında kapsanmış bir değişiklik: PX4 köprüsü
+yazıldığında geri kalan hiçbir şeye dokunulmaz.
+
+### V19 — Gazebo gerçek zamanda koşmak zorunda
+Sürü düğümü **duvar saati** zamanlayıcısıyla tick atıyor (`dt = 0.1 s`) ve her
+tick'te gövdeye hız komutu veriyor. Gazebo gerçek zamandan hızlı koşarsa gövde
+tek bir düğüm tick'inde hedefi **aşıyor**, varış hiç tetiklenmiyor ve görev
+bitmiyor — ölçüldü: 200 saniyelik koşu, 35 saniyelik bir görevi bitiremedi.
+
+Üç düzeltme birlikte uygulandı:
+1. Dünya `real_time_factor = 1.0` ile üretiliyor.
+2. Komut edilen hız, kalan mesafeyi bir tick'te kapatacak değerle sınırlanıyor
+   (`min(speed, remaining/dt)`) — hedefe yaklaşınca yavaşlıyor.
+3. Faz 2 config'lerinde `waypoint_tolerance` 0.5 → 1.5 m (fizik motoru tam
+   duramaz).
+
+Ayrıca `PosePublisher`, **duran** gövdelerin pozunu ayrı bir topic'e
+(`/pose_static`) yayınlıyor. Yalnızca `/pose`'a abone olmak kilitlenme
+üretiyordu: düğüm ilk konumu bekliyor, Gazebo ise konum değişmediği için hiç
+yayınlamıyor, dolayısıyla hiçbir hız komutu gitmiyor ve hiçbir şey kımıldamıyor.
+Her iki topic'e de abone olunuyor.
+
+### V20 — Faz 2 senaryosu küçültüldü (her iki fazda da aynı)
+Gazebo gerçek zamanda koştuğu için 400 m'lik alan koşu başına ~8 dakika sürüyor;
+5 finalist × 2 ölçek × 5 tekrar bunu imkânsız kılardı. Faz 2 senaryosunda alan
+400 → **120 m** (6×6 = 36 hücre) ve `r_comm` aynı **oranda** ölçeklendi
+(%15 → 18 m).
+
+Kritik nokta: **kod-seviyesi karşılaştırma koşuları da aynı dosyayla yapılır.**
+Faz 1 ↔ Faz 2 karşılaştırması (plan Bölüm 5/Faz 2'nin üçüncü maddesi) ancak
+böyle geçerli olur. Kalkış konumları da eşitlenir: launch, konumları
+simülatörün kendisinden sorar (`sim_runner --print-launch-positions`), böylece
+iki faz birebir aynı geometriden başlar.

@@ -263,40 +263,71 @@ void EpisodeRunner::triggerCoordination()
   }
 }
 
-EpisodeMetrics EpisodeRunner::run()
+EpisodeRunner::EpisodeRunner(
+  const swarm_bt_core::ExperimentConfig & config, int seed,
+  const std::string & bt_xml_dir, std::unique_ptr<IPositionSource> source)
+: config_(config),
+  state_(swarm_bt_core::makeSwarmState(config, seed)),
+  detector_(config.r_comm, config.encounter_hysteresis),
+  proximity_monitor_(config.sim.safety_radius, config.encounter_hysteresis),
+  negotiator_(config.swap_threshold),
+  failure_injector_(config.failure, seed)
 {
-  while (!sim_->finished()) {
-    // 1) Ucus katmani: BT'nin verdigi hedeflere dogru hareket.
-    sim_->step();
+  state_.setStigmergyEnabled(config.p5.stigmergy);
+  sim_ = std::move(source);
+  controller_ = std::make_unique<BtSwarmController>(
+    config_, &state_, &negotiator_,
+    bt_xml_dir.empty() ? defaultBtXmlDir() : bt_xml_dir);
+}
 
-    // 2) Guvenlik yaricapi ihlalleri, koordinasyon modelinden bagimsiz olcum.
-    proximity_monitor_.update(state_);
+bool EpisodeRunner::finished() const
+{
+  return sim_->finished();
+}
 
-    // 3) Bolum 2.3 surpriz olayi.
-    failure_injector_.update(&state_);
+void EpisodeRunner::step()
+{
+  // 1) Ucus katmani: BT'nin verdigi hedeflere dogru hareket.
+  sim_->step();
 
-    // 4) P6 zamanlamasi + P2 kapsami -> muzakere kuyruklari.
-    triggerCoordination();
+  // 2) Guvenlik yaricapi ihlalleri, koordinasyon modelinden bagimsiz olcum.
+  proximity_monitor_.update(state_);
 
-    // 5) Karar katmani: BT agaclari tiklenir (tarama komutu + muzakere).
-    controller_->tick();
+  // 3) Bolum 2.3 surpriz olayi.
+  failure_injector_.update(&state_);
 
-    // 6) Kendi alanini bitiren ajan sahipsiz alani ustlenir.
-    //    P5c - intent yayini: sahipsiz alanin varligi suruye duyuruldugu icin
-    //    bosta kalan ajan bunu bir karsilasma beklemeden ogrenir.
-    if (config_.p5.intent_broadcast && !state_.orphanedCells().empty()) {
-      for (const auto & agent : state_.agents()) {
-        const int claimed =
-          swarm_bt_core::AreaSwapNegotiator::claimOrphansIfIdle(&state_, agent.id);
-        if (claimed > 0) {
-          metrics_.orphan_transfers += claimed;
-          ++metrics_.idle_claims;
-          break;
-        }
+  // 4) P6 zamanlamasi + P2 kapsami -> muzakere kuyruklari.
+  triggerCoordination();
+
+  // 5) Karar katmani: BT agaclari tiklenir (tarama komutu + muzakere).
+  controller_->tick();
+
+  // 6) Kendi alanini bitiren ajan sahipsiz alani ustlenir.
+  //    P5c - intent yayini: sahipsiz alanin varligi suruye duyuruldugu icin
+  //    bosta kalan ajan bunu bir karsilasma beklemeden ogrenir.
+  if (config_.p5.intent_broadcast && !state_.orphanedCells().empty()) {
+    for (const auto & agent : state_.agents()) {
+      const int claimed =
+        swarm_bt_core::AreaSwapNegotiator::claimOrphansIfIdle(&state_, agent.id);
+      if (claimed > 0) {
+        metrics_.orphan_transfers += claimed;
+        ++metrics_.idle_claims;
+        break;
       }
     }
   }
+}
 
+EpisodeMetrics EpisodeRunner::run()
+{
+  while (!finished()) {
+    step();
+  }
+  return finalize();
+}
+
+EpisodeMetrics EpisodeRunner::finalize()
+{
   const auto & counters = controller_->counters();
   metrics_.proposals = counters.swap_proposals;
   metrics_.swaps = counters.swaps_applied;

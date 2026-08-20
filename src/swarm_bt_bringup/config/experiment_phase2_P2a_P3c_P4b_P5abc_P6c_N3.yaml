@@ -1,0 +1,32 @@
+deney_id: P2a_P3c_P4b_P5abc_P6c_N3
+N: 3
+r_comm: 18
+esik_degeri: 0.1
+encounter_hysteresis: 0.1
+P2: a
+P3: c
+P4: b
+P5: abc
+P6: c
+sim:
+  area_side: 120
+  cell_size: 20
+  speed: 10
+  speed_jitter: 0.05
+  dt: 0.1
+  time_limit: 3000
+  waypoint_tolerance: 1.5
+  pheromone_decay: 0.01
+  interest_deposit: 1
+  interest_points: 12
+  joint_scan_threshold: 0.25
+  poll_period: 5
+  random_launch: true
+  safety_radius: 3
+failure:
+  enabled: false
+  time: -1
+  agent_id: -1
+run:
+  repetitions: 10
+  seed: 0
