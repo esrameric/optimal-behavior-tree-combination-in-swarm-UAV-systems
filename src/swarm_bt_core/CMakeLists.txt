@@ -70,7 +70,8 @@ if(BUILD_TESTING)
       test_swarm_state
       test_encounter_detector
       test_experiment_config
-      test_bt_xml_variants)
+      test_bt_xml_variants
+      test_mission_area_invariant)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()

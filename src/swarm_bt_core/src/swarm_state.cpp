@@ -139,4 +139,12 @@ void SwarmState::assignEqualStrips()
   }
 }
 
+SwarmState makeSwarmState(const ExperimentConfig & config)
+{
+  config.validate();
+  SwarmState state(config.missionArea(), config.n_agents, config.sim.pheromone_decay);
+  state.assignEqualStrips();
+  return state;
+}
+
 }  // namespace swarm_bt_core

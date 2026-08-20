@@ -156,6 +156,17 @@ std::string ExperimentConfig::experimentId() const
   return id.str();
 }
 
+MissionArea ExperimentConfig::missionArea() const
+{
+  // n_agents bilincli olarak kullanilmiyor - bkz. basliktaki aciklama.
+  return MissionArea(sim.area_side, sim.area_side, sim.cell_size);
+}
+
+double ExperimentConfig::cellsPerAgent() const
+{
+  return static_cast<double>(missionArea().cellCount()) / static_cast<double>(n_agents);
+}
+
 std::string ExperimentConfig::btXmlFileName() const
 {
   switch (p4) {

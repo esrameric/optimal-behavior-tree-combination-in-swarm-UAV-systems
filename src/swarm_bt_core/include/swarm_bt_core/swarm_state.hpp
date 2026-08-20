@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <vector>
 
+#include "swarm_bt_core/experiment_config.hpp"
 #include "swarm_bt_core/geometry.hpp"
 #include "swarm_bt_core/mission_area.hpp"
 #include "swarm_bt_core/pheromone_grid.hpp"
@@ -95,6 +96,12 @@ private:
   PheromoneGrid interest_;
   double time_{0.0};
 };
+
+/// Deney konfigurasyonundan baslangic suru durumu uretir.
+///
+/// Alan ExperimentConfig::missionArea() uzerinden gelir; bu sayede N ile alan
+/// arasinda hicbir bagimlilik olusamaz (plan Bolum 1).
+SwarmState makeSwarmState(const ExperimentConfig & config);
 
 }  // namespace swarm_bt_core
 

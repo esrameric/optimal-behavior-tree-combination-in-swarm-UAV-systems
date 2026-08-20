@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "swarm_bt_core/mission_area.hpp"
+
 namespace swarm_bt_core
 {
 
@@ -113,6 +115,20 @@ struct ExperimentConfig
 
   /// Plan Bolum 3 semasi: "P2b_P3c_P4c_P5bc_P6c_N3".
   std::string experimentId() const;
+
+  /// Gorev alanini uretir.
+  ///
+  /// ALANIN TEK KAYNAGI BURASIDIR ve bilincli olarak n_agents'i KULLANMAZ:
+  /// plan Bolum 1 geregi mission alani N degisse de buyumez. N=5'te ayni alanda
+  /// daha yogun ucus, dolayisiyla daha sik karsilasma olusmasi, N=3 ile
+  /// karsilastirmanin temel dayanagidir. (Alani N ile orantili buyutup saf
+  /// olceklenebilirligi olcmek, plan Bolum 9'daki AYRI bir kontrol deneyidir.)
+  MissionArea missionArea() const;
+
+  /// Drone basina duşen ortalama tarama hucresi sayisi. Alan sabit oldugu icin
+  /// bu deger N ile ters orantili azalir; olcek karsilastirmasinin niceliksel
+  /// ifadesi budur.
+  double cellsPerAgent() const;
 
   /// P4 seciminin karsilik geldigi BT XML dosya adi.
   std::string btXmlFileName() const;
