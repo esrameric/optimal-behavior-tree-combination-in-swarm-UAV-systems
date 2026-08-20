@@ -9,6 +9,7 @@
 // Ayrica Bolum 6'nin istedigi olay kayitlarini ROS2 topic'lerine yayinlar;
 // rosbag2 bu topic'leri kaydeder.
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -225,6 +226,8 @@ private:
 
     runner_->step();
     publishTelemetry();
+    publishAssignmentChanges();
+    publishEncounters();
 
     if (runner_->finished()) {
       finished_ = true;
@@ -232,12 +235,51 @@ private:
       RCLCPP_INFO(
         get_logger(),
         "Koşu bitti: sure=%.1f s tick=%d kapsama=%s karsilasma=%d takas=%d "
-        "devralinan=%d churn=%.3f kararlilik=%.3f carpisma=%d",
+        "devralinan=%d churn=%.3f kararlilik=%.3f carpisma=%d atama_olayi=%d",
         metrics.mission_time, metrics.ticks,
         metrics.coverage_complete ? "tamam" : "eksik",
         metrics.encounters, metrics.swaps, metrics.orphan_transfers,
-        metrics.churn_ratio, metrics.assignment_stability, metrics.collisions);
+        metrics.churn_ratio, metrics.assignment_stability, metrics.collisions,
+        published_assignment_events_);
       rclcpp::shutdown();
+    }
+  }
+
+  /// Bolum 6: atama degisikligi olaylarini kaynagindan alip yayinlar.
+  ///
+  /// Sayaci yoklamak yerine SwarmState'in olay kaydi bosaltilir; boylece her
+  /// degisikligin sebebi, ortagi ve etkilenen hucre sayisi dogru yayinlanir
+  /// (yoklamayla bunlar bilinemiyordu).
+  void publishAssignmentChanges()
+  {
+    const auto stamp = now();
+    for (const auto & event : runner_->mutableState().assignmentLog().drain()) {
+      swarm_bt_msgs::msg::AssignmentChange message;
+      message.stamp = stamp;
+      message.agent_id = event.agent_id;
+      message.reason = static_cast<std::uint8_t>(event.reason);
+      message.peer_id = event.peer_id;
+      message.cells_changed = event.cells_changed;
+      message.region_cells = event.region_cells;
+      message.remaining_cells = event.remaining_cells;
+      message.change_index = event.change_index;
+      assignment_publisher_->publish(message);
+      ++published_assignment_events_;
+    }
+  }
+
+  /// Bolum 6: comm-range giris olaylarini yayinlar.
+  void publishEncounters()
+  {
+    const auto stamp = now();
+    for (const auto & encounter : runner_->drainEncounters()) {
+      swarm_bt_msgs::msg::EncounterEvent message;
+      message.stamp = stamp;
+      message.agent_a = encounter.agent_a;
+      message.agent_b = encounter.agent_b;
+      message.distance = encounter.distance;
+      message.comm_range = config_.r_comm;
+      encounter_publisher_->publish(message);
     }
   }
 
@@ -259,27 +301,6 @@ private:
       status.region_cells = static_cast<int>(agent.region.size());
       status.remaining_cells = state.remainingCells(agent.id);
       status_publisher_->publish(status);
-
-      // Bolum 6: her atama degisikliginde bir kayit duşer.
-      const auto index = static_cast<std::size_t>(agent.id);
-      if (index >= published_changes_.size()) {
-        published_changes_.resize(index + 1, 0);
-      }
-      if (agent.assignment_changes > published_changes_[index]) {
-        swarm_bt_msgs::msg::AssignmentChange change;
-        change.stamp = stamp;
-        change.agent_id = agent.id;
-        change.reason = agent.alive ?
-          swarm_bt_msgs::msg::AssignmentChange::REASON_AREA_SWAP :
-          swarm_bt_msgs::msg::AssignmentChange::REASON_FAILURE;
-        change.peer_id = -1;
-        change.cells_changed = 0;
-        change.region_cells = static_cast<int>(agent.region.size());
-        change.remaining_cells = state.remainingCells(agent.id);
-        change.change_index = agent.assignment_changes;
-        assignment_publisher_->publish(change);
-        published_changes_[index] = agent.assignment_changes;
-      }
     }
   }
 
@@ -294,7 +315,7 @@ private:
   rclcpp::Publisher<swarm_bt_msgs::msg::AgentStatus>::SharedPtr status_publisher_;
   rclcpp::Publisher<swarm_bt_msgs::msg::AssignmentChange>::SharedPtr assignment_publisher_;
   std::vector<rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr> pose_subscriptions_;
-  std::vector<int> published_changes_;
+  int published_assignment_events_{0};
   rclcpp::TimerBase::SharedPtr timer_;
 };
 

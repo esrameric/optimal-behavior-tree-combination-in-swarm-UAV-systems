@@ -225,6 +225,7 @@ void EpisodeRunner::triggerCoordination()
         std::vector<std::pair<int, int>> entries;
         for (const auto & encounter : detector_.update(state_)) {
           entries.emplace_back(encounter.agent_a, encounter.agent_b);
+          pending_encounters_.push_back(encounter);
         }
         const bool central =
           config_.p2 == swarm_bt_core::CoordinationArchitecture::kCentral;
@@ -239,7 +240,9 @@ void EpisodeRunner::triggerCoordination()
         // P6b: her tick, menzilde OLAN tum ciftler icin karar yeniden
         // degerlendirilir.
         ++metrics_.detection_checks;
-        detector_.update(state_);
+        for (const auto & encounter : detector_.update(state_)) {
+          pending_encounters_.push_back(encounter);
+        }
         runCoordination(
           std::vector<std::pair<int, int>>(
             detector_.currentPairs().begin(), detector_.currentPairs().end()));
@@ -254,7 +257,9 @@ void EpisodeRunner::triggerCoordination()
         }
         next_poll_time_ = state_.time() + config_.sim.poll_period;
         ++metrics_.detection_checks;
-        detector_.update(state_);
+        for (const auto & encounter : detector_.update(state_)) {
+          pending_encounters_.push_back(encounter);
+        }
         runCoordination(
           std::vector<std::pair<int, int>>(
             detector_.currentPairs().begin(), detector_.currentPairs().end()));
@@ -278,6 +283,11 @@ EpisodeRunner::EpisodeRunner(
   controller_ = std::make_unique<BtSwarmController>(
     config_, &state_, &negotiator_,
     bt_xml_dir.empty() ? defaultBtXmlDir() : bt_xml_dir);
+}
+
+std::vector<swarm_bt_core::EncounterEvent> EpisodeRunner::drainEncounters()
+{
+  return std::move(pending_encounters_);
 }
 
 bool EpisodeRunner::finished() const

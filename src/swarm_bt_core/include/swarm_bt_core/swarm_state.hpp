@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "swarm_bt_core/assignment_log.hpp"
 #include "swarm_bt_core/experiment_config.hpp"
 #include "swarm_bt_core/geometry.hpp"
 #include "swarm_bt_core/mission_area.hpp"
@@ -125,6 +126,18 @@ public:
   /// Ajanin bolgesini kendi supurme yonuyle yeniden siralar ve siradaki
   /// waypoint'i basa alir. Takas sonrasi rota yeniden planlamasi icin.
   void resequenceRegion(int agent_id);
+
+  /// Atama degisikligi olay kaydi (plan Bolum 6).
+  const AssignmentLog & assignmentLog() const {return assignment_log_;}
+  AssignmentLog & assignmentLog() {return assignment_log_;}
+
+  /// Bir atama degisikligini kaydeder VE ajanin sayacini artirir.
+  ///
+  /// Atama degisikliginin TEK gecis noktasi budur: sayac ile olay kaydi
+  /// birbirinden sapamasin diye ikisi ayni cagride guncellenir. Bolum 6'daki
+  /// atama kararliligi ve churn orani metrikleri bu kayittan turer.
+  void recordAssignmentChange(
+    int agent_id, AssignmentReason reason, int peer_id, int cells_changed);
   /// Ajanin bolgesinde taranmamis hucre orani [0,1]; bolge bossa 0.
   double remainingRatio(int agent_id) const;
 
@@ -174,6 +187,7 @@ private:
   PheromoneGrid interest_;
   std::vector<int> orphaned_cells_;
   std::vector<int> interest_points_;
+  AssignmentLog assignment_log_;
   bool stigmergy_{true};
   double time_{0.0};
 };

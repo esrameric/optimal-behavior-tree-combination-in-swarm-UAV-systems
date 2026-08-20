@@ -143,6 +143,24 @@ double SwarmState::remainingRatio(int agent_id) const
   return static_cast<double>(remainingCells(agent_id)) / static_cast<double>(region.size());
 }
 
+void SwarmState::recordAssignmentChange(
+  int agent_id, AssignmentReason reason, int peer_id, int cells_changed)
+{
+  auto & a = agent(agent_id);
+  ++a.assignment_changes;
+
+  AssignmentChangeEvent event;
+  event.time = time_;
+  event.agent_id = agent_id;
+  event.reason = reason;
+  event.peer_id = peer_id;
+  event.cells_changed = cells_changed;
+  event.region_cells = static_cast<int>(a.region.size());
+  event.remaining_cells = remainingCells(agent_id);
+  event.change_index = a.assignment_changes;
+  assignment_log_.record(event);
+}
+
 void SwarmState::failAgent(int agent_id)
 {
   auto & a = agent(agent_id);
@@ -157,9 +175,10 @@ void SwarmState::failAgent(int agent_id)
       orphaned_cells_.push_back(cell_id);
     }
   }
+  const auto lost_cells = static_cast<int>(orphaned_cells_.size());
   a.region.clear();
   a.next_waypoint = 0;
-  ++a.assignment_changes;
+  recordAssignmentChange(agent_id, AssignmentReason::kFailure, -1, lost_cells);
 }
 
 void SwarmState::claimOrphanedCells(int agent_id, const std::vector<int> & cells)
@@ -187,7 +206,8 @@ void SwarmState::claimOrphanedCells(int agent_id, const std::vector<int> & cells
 
   if (transferred > 0) {
     resequenceRegion(agent_id);
-    ++a.assignment_changes;
+    recordAssignmentChange(
+      agent_id, AssignmentReason::kOrphanTakeover, -1, transferred);
   }
 }
 

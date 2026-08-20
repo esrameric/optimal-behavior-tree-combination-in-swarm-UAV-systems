@@ -294,6 +294,13 @@ int AreaSwapNegotiator::startJointScan(SwarmState * state, int agent_a, int agen
     }
     state->resequenceRegion(agent_id);
   }
+
+  // Ortak tarama da bir atama degisikligidir: iki ajanin da bolgesi buyudu.
+  const int shared_per_agent = static_cast<int>(shared.size());
+  state->recordAssignmentChange(
+    agent_a, AssignmentReason::kJointScan, agent_b, shared_per_agent);
+  state->recordAssignmentChange(
+    agent_b, AssignmentReason::kJointScan, agent_a, shared_per_agent);
   return added;
 }
 
@@ -327,9 +334,12 @@ void AreaSwapNegotiator::apply(SwarmState * state, const SwapProposal & proposal
   state->resequenceRegion(proposal.proposer_id);
   state->resequenceRegion(proposal.receiver_id);
 
-  // Bolum 6 metrigi (atama kararliligi): her iki ajanin da atanmis alani degisti.
-  ++state->agent(proposal.proposer_id).assignment_changes;
-  ++state->agent(proposal.receiver_id).assignment_changes;
+  // Bolum 6: her iki ajanin da atanmis alani degisti; olay kaydi duşuyor.
+  const int transferred = static_cast<int>(proposal.offered_cells.size());
+  state->recordAssignmentChange(
+    proposal.proposer_id, AssignmentReason::kAreaSwap, proposal.receiver_id, transferred);
+  state->recordAssignmentChange(
+    proposal.receiver_id, AssignmentReason::kAreaSwap, proposal.proposer_id, transferred);
 }
 
 }  // namespace swarm_bt_core

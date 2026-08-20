@@ -33,6 +33,7 @@ setup(
             'stability_hypothesis = swarm_bt_analysis.stability_hypothesis:main',
             'parameter_sensitivity = swarm_bt_analysis.parameter_sensitivity:main',
             'cross_study = swarm_bt_analysis.cross_study:main',
+            'bag_metrics = swarm_bt_analysis.bag_metrics:main',
         ],
     },
 )

@@ -131,6 +131,10 @@ public:
 
   swarm_bt_core::SwarmState & mutableState() {return state_;}
 
+  /// Son adimdan bu yana dogan karsilasma olaylarini alir ve kuyrugu bosaltir
+  /// (Bolum 6: rosbag2'ye yazilmak uzere).
+  std::vector<swarm_bt_core::EncounterEvent> drainEncounters();
+
   const swarm_bt_core::SwarmState & state() const {return state_;}
   const swarm_bt_core::ExperimentConfig & config() const {return config_;}
 
@@ -164,6 +168,9 @@ private:
 
   /// P6a icin: bir sonraki yoklama zamani [s].
   double next_poll_time_{0.0};
+
+  /// Bu adimda dogan, henuz disari verilmemis karsilasma olaylari.
+  std::vector<swarm_bt_core::EncounterEvent> pending_encounters_;
 
   swarm_bt_core::ExperimentConfig config_;
   swarm_bt_core::SwarmState state_;

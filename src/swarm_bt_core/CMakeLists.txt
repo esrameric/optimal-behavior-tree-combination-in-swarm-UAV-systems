@@ -31,6 +31,7 @@ add_library(${PROJECT_NAME} SHARED
   src/failure_injector.cpp
   src/parameter_space.cpp
   src/region_allocator.cpp
+  src/assignment_log.cpp
   src/bt_context.cpp
   src/bt_nodes.cpp
 )
@@ -83,7 +84,8 @@ if(BUILD_TESTING)
       test_parameter_space
       test_region_allocator
       test_interest_points
-      test_negotiation_subtree)
+      test_negotiation_subtree
+      test_assignment_log)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()
