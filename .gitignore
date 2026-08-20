@@ -2,6 +2,10 @@
 build/
 install/
 log/
+# colcon yanlislikla paket klasorunden calistirilirsa orada da olusur
+src/*/build/
+src/*/install/
+src/*/log/
 
 # --- vendor edilen kaynak bagimliliklar (dependencies.repos ile cekilir) ---
 src/vendor/

@@ -107,3 +107,25 @@ message found" ile işaretliyordu. C++ paketlerine `CPPLINT.cfg`
 guard, include sırası, satır uzunluğu) ve uncrustify/cppcheck/lint_cmake/xmllint
 tam olarak açık. Faz 0 sonunda tüm lint + test paketi temiz:
 **36 test, 0 hata, 0 başarısızlık**.
+
+### V6 — Şerit atamasında sürü düzeyinde serpantin desen
+İlk uygulamada alan N eşit dikey şeride bölünüp hepsi aynı yönde (soldan sağa)
+taranıyordu. Bu, ajanları **sabit sütun farkıyla kilitli** ilerletiyor ve
+sonuçta hiçbir drone diğerine yaklaşmıyordu: 400 m'lik alanda r_comm=60 m ile
+**bir koşuda sıfır karşılaşma olayı** üretiliyordu. Karşılaşmalar bu çalışmanın
+tüm dayanağı olduğu için (Bölüm 2.2 negotiation, Bölüm 6 churn/karşılaşma
+sıklığı metrikleri) model bu haliyle kullanılamazdı.
+
+Çözüm: bitişik ajanlara zıt sütun yönü verildi (ajan 0 soldan sağa, ajan 1
+sağdan sola, ...). Bu, sürü düzeyinde serpantin bir desen oluşturur; komşu
+ajanlar ortak sınırlarında buluşur. Sonuç: N=3 → 2 karşılaşma, N=5 → 4
+karşılaşma (yaklaşık N-1 sınır çifti), N ile monoton artıyor.
+
+Karşılaşma sayısı hâlâ düşük; bu bilinçli olarak Bölüm 1'deki `r_comm`
+kalibrasyonuna bırakıldı (plan: "karşılaşmaların çok seyrek ya da çok sık
+olmaması için" kalibre edilecek).
+
+### V7 — Simülasyon zamanı tick sayısından türetilir
+`time += dt` biriktirmesi kayan nokta kayması yaratıyor (10 × 0.1 = 0.999...)
+ve zaman sınırı kontrolünü bir tick kaydırıyordu. Simülatör artık zamanı
+`tick_count * dt` olarak yazıyor.

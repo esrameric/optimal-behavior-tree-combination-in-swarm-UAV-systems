@@ -19,6 +19,10 @@ find_package(behaviortree_cpp REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/version.cpp
+  src/mission_area.cpp
+  src/pheromone_grid.cpp
+  src/swarm_state.cpp
+  src/encounter_detector.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -51,8 +55,15 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(test_btcpp_env test/test_btcpp_env.cpp)
-  target_link_libraries(test_btcpp_env ${PROJECT_NAME})
+  foreach(_test
+      test_btcpp_env
+      test_mission_area
+      test_pheromone_grid
+      test_swarm_state
+      test_encounter_detector)
+    ament_add_gtest(${_test} test/${_test}.cpp)
+    target_link_libraries(${_test} ${PROJECT_NAME})
+  endforeach()
 endif()
 
 ament_package()
