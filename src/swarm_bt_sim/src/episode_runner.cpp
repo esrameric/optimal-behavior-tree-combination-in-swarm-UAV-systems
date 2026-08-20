@@ -33,6 +33,7 @@ EpisodeRunner::EpisodeRunner(const swarm_bt_core::ExperimentConfig & config, int
 : config_(config),
   state_(swarm_bt_core::makeSwarmState(config, seed)),
   detector_(config.r_comm, config.encounter_hysteresis),
+  proximity_monitor_(config.sim.safety_radius, config.encounter_hysteresis),
   negotiator_(config.swap_threshold),
   failure_injector_(config.failure, seed)
 {
@@ -338,6 +339,10 @@ EpisodeMetrics EpisodeRunner::run()
     sim_->step();
     failure_injector_.update(&state_);
 
+    // Guvenlik yaricapi ihlalleri, koordinasyon modelinden bagimsiz olarak
+    // her tick olculur (P6 yoklama araligindan etkilenmemeli).
+    proximity_monitor_.update(state_);
+
     triggerCoordination();
 
     // Kendi alanini bitiren ajan, sahipsiz kalmis alani ustlenir. Yalnizca
@@ -372,6 +377,7 @@ EpisodeMetrics EpisodeRunner::run()
   // P6b'de koordinasyon karari cok daha sik degerlendirilir ama karsilasma
   // sayisi degismez.
   metrics_.encounters = detector_.totalEncounters();
+  metrics_.collisions = proximity_monitor_.totalEncounters();
 
   // Ajanlarin bilgi kapsamasi: gercekte taranmis hucrelerin ne kadarini
   // biliyorlar. P5b (stigmerji) acikken 1.0; kapaliyken paylasilan bilgi kadar.

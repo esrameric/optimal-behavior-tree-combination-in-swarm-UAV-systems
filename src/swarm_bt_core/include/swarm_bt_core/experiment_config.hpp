@@ -83,6 +83,14 @@ struct SimulationParameters
   /// ve P3 ekseni hicbir sey olcmez. Ayrica koşular arasi tek rastgelelik hiz
   /// sapmasi kalir, bu da >=10 tekrarin anlamini zayiflatir.
   bool random_launch{true};
+
+  /// Guvenlik yaricapi [m]. Iki drone bunun altina inerse "carpisma" sayilir.
+  ///
+  /// Faz 1 simulatoru carpisma DINAMIGI modellemez (plan: kapsam disi); bu
+  /// olcum bir yakinlik ihlali sayacidir ve Bolum 6'daki "carpisma sayisi"
+  /// metriginin kod-seviyesi karsiligidir. Faz 2'de Gazebo gercek carpismayi
+  /// uretecek; iki olcumun ayni yonde hareket edip etmedigi karsilastirilacak.
+  double safety_radius{5.0};
 };
 
 /// Bolum 2.3 - opsiyonel surpriz olay: bir drone'u gorev ortasinda arizalandirma.

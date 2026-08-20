@@ -271,6 +271,12 @@ void ExperimentConfig::validate() const
   if (sim.pheromone_decay < 0.0 || sim.pheromone_decay > 1.0) {
     throw std::invalid_argument("pheromone_decay [0,1] araliginda olmali");
   }
+  if (sim.safety_radius <= 0.0) {
+    throw std::invalid_argument("safety_radius pozitif olmali");
+  }
+  if (sim.safety_radius >= r_comm) {
+    throw std::invalid_argument("safety_radius r_comm'dan kucuk olmali");
+  }
   if (sim.poll_period <= 0.0) {
     throw std::invalid_argument("poll_period pozitif olmali");
   }
@@ -317,6 +323,7 @@ std::string ExperimentConfig::toYaml() const
       << YAML::Key << "interest_deposit" << YAML::Value << sim.interest_deposit
       << YAML::Key << "poll_period" << YAML::Value << sim.poll_period
       << YAML::Key << "random_launch" << YAML::Value << sim.random_launch
+      << YAML::Key << "safety_radius" << YAML::Value << sim.safety_radius
       << YAML::EndMap;
 
   out << YAML::Key << "failure" << YAML::Value << YAML::BeginMap
@@ -362,6 +369,7 @@ ExperimentConfig ExperimentConfig::fromYamlString(const std::string & yaml_text)
   readIfPresent(sim, "interest_deposit", &config.sim.interest_deposit);
   readIfPresent(sim, "poll_period", &config.sim.poll_period);
   readIfPresent(sim, "random_launch", &config.sim.random_launch);
+  readIfPresent(sim, "safety_radius", &config.sim.safety_radius);
 
   const YAML::Node failure = root["failure"];
   readIfPresent(failure, "enabled", &config.failure.enabled);

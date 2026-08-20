@@ -34,6 +34,9 @@ target_link_libraries(calibrate_rcomm ${PROJECT_NAME})
 add_executable(calibrate_threshold src/calibrate_threshold_main.cpp)
 target_link_libraries(calibrate_threshold ${PROJECT_NAME})
 
+add_executable(ofat_sweep src/ofat_sweep_main.cpp)
+target_link_libraries(ofat_sweep ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
@@ -41,7 +44,7 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(TARGETS sim_runner calibrate_rcomm calibrate_threshold
+install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)

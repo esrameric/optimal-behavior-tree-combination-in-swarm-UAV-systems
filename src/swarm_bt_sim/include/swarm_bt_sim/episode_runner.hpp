@@ -24,6 +24,9 @@ struct EpisodeMetrics
   int ticks{0};                    ///< tick maliyeti
   bool coverage_complete{false};
   double total_distance{0.0};      ///< tum ajanlarin kat ettigi toplam mesafe [m]
+  /// Carpisma sayisi: guvenlik yaricapinin altina inen ikili yakinlik ihlali
+  /// sayisi (Faz 1'de yakinlik ihlali, Faz 2'de gercek carpisma).
+  int collisions{0};
 
   // --- bu calismaya ozgu metrikler (Bolum 6) ---
   int encounters{0};               ///< karsilasma sikligi: comm-range giris sayisi
@@ -134,6 +137,8 @@ private:
   swarm_bt_core::ExperimentConfig config_;
   swarm_bt_core::SwarmState state_;
   swarm_bt_core::EncounterDetector detector_;
+  /// Guvenlik yaricapi ihlallerini ayni yukselen-kenar mantigiyla sayar.
+  swarm_bt_core::EncounterDetector proximity_monitor_;
   swarm_bt_core::AreaSwapNegotiator negotiator_;
   swarm_bt_core::FailureInjector failure_injector_;
   std::unique_ptr<KinematicSim> sim_;

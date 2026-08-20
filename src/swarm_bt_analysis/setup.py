@@ -25,6 +25,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'ofat_report = swarm_bt_analysis.report_ofat:main',
         ],
     },
 )
