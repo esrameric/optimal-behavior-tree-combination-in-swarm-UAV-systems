@@ -1,5 +1,6 @@
 #include "swarm_bt_core/parameter_space.hpp"
 
+#include <cmath>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -103,6 +104,27 @@ std::vector<ExperimentConfig> ofatVariants(const ExperimentConfig & baseline)
   addAxis(btArchitectureAxis());
 
   return variants;
+}
+
+ExperimentConfig withProportionalArea(
+  const ExperimentConfig & base, int n_agents, int reference_agents)
+{
+  if (n_agents <= 0 || reference_agents <= 0) {
+    throw std::invalid_argument("withProportionalArea: ajan sayilari pozitif olmali");
+  }
+
+  ExperimentConfig config = base;
+  config.n_agents = n_agents;
+  const double factor = std::sqrt(
+    static_cast<double>(n_agents) / static_cast<double>(reference_agents));
+  config.sim.area_side = base.sim.area_side * factor;
+
+  // r_comm alanla ayni ORANDA olceklenir; aksi halde menzil goreli olarak
+  // kuculur ve karsilasma sikligi alan degisiminden etkilenir -- kontrol
+  // deneyinin amaci tam olarak bunu onlemek.
+  config.r_comm = base.r_comm * factor;
+  config.validate();
+  return config;
 }
 
 std::string combinationId(const ExperimentConfig & config)

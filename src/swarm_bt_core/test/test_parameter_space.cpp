@@ -1,6 +1,7 @@
 // Plan Bolum 3: N in {3,5} olcek degiskeni ve kombinasyon x olcek cogaltmasi.
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <set>
 #include <string>
 #include <vector>
@@ -168,4 +169,70 @@ TEST(ParameterSpace, OfatVaryantlariOlcekleCogaltilinca32Koşu)
   const auto with_scales = withScaleVariants(variants);
   EXPECT_EQ(with_scales.size(), variants.size() * 2);
   EXPECT_EQ(with_scales.size(), 32u);
+}
+
+// --- Bolum 9 istege bagli genisletmeleri ---
+
+TEST(ParameterSpace, GenisletilmisOlcekKumesiAnaKumeyiIcerir)
+{
+  // Ucuncu bir N degeri eklemek, mevcut iki degeri KORUYARAK yapilmali;
+  // aksi halde onceki sonuclarla karsilastirilamaz.
+  const auto & extended = swarm_bt_core::extendedScaleValues();
+  for (const int n : scaleValues()) {
+    EXPECT_NE(std::find(extended.begin(), extended.end(), n), extended.end())
+      << "N=" << n << " genisletilmis kumede yok";
+  }
+  EXPECT_GT(extended.size(), scaleValues().size());
+}
+
+TEST(ParameterSpace, OrantiliAlanDroneBasinaAlaniSabitTutar)
+{
+  // Plan Bolum 9: "drone basina duşen alan sabit kalacak sekilde".
+  const auto base = swarm_bt_core::baselineConfig();
+  const double reference_per_agent =
+    swarm_bt_core::withProportionalArea(base, 3, 3).cellsPerAgent();
+
+  for (const int n : swarm_bt_core::extendedScaleValues()) {
+    const auto scaled = swarm_bt_core::withProportionalArea(base, n, 3);
+    // Hucre sayisi tam sayiya yuvarlandigi icin kucuk sapma kacinilmaz.
+    EXPECT_NEAR(scaled.cellsPerAgent(), reference_per_agent, reference_per_agent * 0.12)
+      << "N=" << n << " drone basina alan sabit kalmadi";
+  }
+}
+
+TEST(ParameterSpace, OrantiliAlanKenariKokNIleBuyur)
+{
+  const auto base = swarm_bt_core::baselineConfig();
+  const auto scaled = swarm_bt_core::withProportionalArea(base, 12, 3);
+  // sqrt(12/3) = 2 -> kenar iki katina cikmali
+  EXPECT_NEAR(scaled.sim.area_side, base.sim.area_side * 2.0, 1e-9);
+}
+
+TEST(ParameterSpace, OrantiliAlanRCommuAyniOrandaOlcekler)
+{
+  // Menzil olceklenmezse goreli olarak kuculur ve karsilasma sikligi alan
+  // degisiminden etkilenir; kontrol deneyinin amaci tam olarak bunu onlemek.
+  const auto base = swarm_bt_core::baselineConfig();
+  const auto scaled = swarm_bt_core::withProportionalArea(base, 12, 3);
+  EXPECT_NEAR(scaled.r_comm / scaled.sim.area_side, base.r_comm / base.sim.area_side, 1e-9);
+}
+
+TEST(ParameterSpace, OrantiliAlanGizliNBagimliligiEklemez)
+{
+  // Bolum 1 invaryanti korunmali: missionArea() N'e bakmamali. Alan yalnizca
+  // sim.area_side uzerinden degismeli.
+  const auto base = swarm_bt_core::baselineConfig();
+  const auto scaled = swarm_bt_core::withProportionalArea(base, 10, 3);
+
+  auto probe = scaled;
+  probe.n_agents = 3;
+  EXPECT_EQ(probe.missionArea().cellCount(), scaled.missionArea().cellCount())
+    << "missionArea() N'e bagimli hale gelmis";
+}
+
+TEST(ParameterSpace, OrantiliAlanGecersizGirdiyiReddeder)
+{
+  const auto base = swarm_bt_core::baselineConfig();
+  EXPECT_THROW(swarm_bt_core::withProportionalArea(base, 0, 3), std::invalid_argument);
+  EXPECT_THROW(swarm_bt_core::withProportionalArea(base, 3, 0), std::invalid_argument);
 }

@@ -31,6 +31,34 @@ std::vector<ExperimentConfig> withScaleVariants(const ExperimentConfig & base);
 /// Verilen kombinasyon listesini olcek degerleriyle cogaltir.
 std::vector<ExperimentConfig> withScaleVariants(const std::vector<ExperimentConfig> & bases);
 
+/// Plan Bolum 9 - istege bagli genisletme: ucuncu (ve dorduncu) olcek degeri.
+///
+/// "Eger N=3 -> N=5 arasinda ilginc bir trend gorursen, bunun devam edip
+/// etmedigini gormek icin ucuncu bir N degeri eklemeyi dusunebilirsin."
+/// Trend gorüldu (atama kararliligi 16/16 kombinasyonda duşuyor), bu yuzden
+/// genisletilmis olcek kumesi tanimli.
+inline const std::vector<int> & extendedScaleValues()
+{
+  static const std::vector<int> kValues = {3, 5, 7, 10};
+  return kValues;
+}
+
+/// Plan Bolum 9 - istege bagli genisletme: ORANTILI ALAN kontrol deneyi.
+///
+/// "Mission alanini N ile orantili buyuterek (drone basina duşen alan sabit
+/// kalacak sekilde) saf olceklenebilirligi (karsilasma sikligi etkisi olmadan)
+/// ayrica test edebilirsin -- bu, confound'u ortadan kaldiran temiz bir
+/// kontrol grubu olur."
+///
+/// Alanin kenar uzunlugu sqrt(N / referans_N) ile carpilir; alan N ile
+/// dogru orantili buyur, drone basina duşen alan SABIT kalir.
+///
+/// Onemli: bu islem alani \c sim.area_side uzerinden degistirir, gizli bir
+/// N bagimliligi eklemez. ExperimentConfig::missionArea() N'den bagimsiz
+/// kalmaya devam eder (Bolum 1 invaryanti).
+ExperimentConfig withProportionalArea(
+  const ExperimentConfig & base, int n_agents, int reference_agents);
+
 /// Bir kombinasyonun olcekten arindirilmis kimligi ("..._N3" eki olmadan).
 /// Iki olcegi eslestirmek icin kullanilir.
 std::string combinationId(const ExperimentConfig & config);

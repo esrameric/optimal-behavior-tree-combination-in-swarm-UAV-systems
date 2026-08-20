@@ -43,6 +43,14 @@ target_link_libraries(calibrate_threshold ${PROJECT_NAME})
 add_executable(ofat_sweep src/ofat_sweep_main.cpp)
 target_link_libraries(ofat_sweep ${PROJECT_NAME})
 
+# Bolum 9 - confound kontrol deneyi.
+add_executable(confound_control src/confound_control_main.cpp)
+target_link_libraries(confound_control ${PROJECT_NAME})
+
+# Bolum 9 - orantili alan ve genisletilmis olcek kontrolu.
+add_executable(scale_extension src/scale_extension_main.cpp)
+target_link_libraries(scale_extension ${PROJECT_NAME})
+
 # Faz 2 - Gazebo destekli koşu dugumu (rclcpp).
 add_executable(gazebo_swarm_node src/gazebo_swarm_node.cpp)
 target_link_libraries(gazebo_swarm_node ${PROJECT_NAME})
@@ -61,7 +69,7 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
 )
 install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep
-  gazebo_swarm_node encounter_detector_node
+  confound_control scale_extension gazebo_swarm_node encounter_detector_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)
