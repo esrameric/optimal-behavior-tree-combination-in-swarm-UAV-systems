@@ -38,10 +38,11 @@ int KinematicSim::nextTargetCell(AgentState & agent) const
 {
   while (agent.next_waypoint < agent.region.size()) {
     const int cell_id = agent.region[agent.next_waypoint];
-    if (!state_->isVisited(cell_id)) {
+    if (!state_->knowsVisited(agent.id, cell_id)) {
       return cell_id;
     }
-    // Hucre baskasi tarafindan taranmis: stigmerji sayesinde atla.
+    // Ajan bu hucrenin tarandigini BILIYOR: atla. Stigmerji (P5b) kapaliysa
+    // baskasinin taradigi hucreyi bilemez ve tekrar tarar.
     ++agent.next_waypoint;
   }
   return -1;
@@ -63,7 +64,7 @@ void KinematicSim::moveAgent(AgentState & agent)
     // Hedefe varildi: hucreyi tara, izini birak, siradakine gec.
     agent.distance_travelled += remaining;
     agent.position = target;
-    state_->markVisited(target_cell);
+    state_->markVisitedBy(agent.id, target_cell);
     state_->interest().deposit(target_cell, config_.interest_deposit);
     ++agent.next_waypoint;
     return;

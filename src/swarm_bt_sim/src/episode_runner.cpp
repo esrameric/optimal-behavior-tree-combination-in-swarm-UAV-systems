@@ -1,5 +1,6 @@
 #include "swarm_bt_sim/episode_runner.hpp"
 
+#include <algorithm>
 #include <memory>
 
 namespace swarm_bt_sim
@@ -30,7 +31,31 @@ EpisodeRunner::EpisodeRunner(const swarm_bt_core::ExperimentConfig & config, int
   negotiator_(config.swap_threshold),
   failure_injector_(config.failure, seed)
 {
+  // P5b - stigmerji: acikken ajanlar cevredeki izleri okur, kapaliyken yalnizca
+  // kendi taradiklarini bilir ve baskasinin taradigi hucreyi tekrar tarar.
+  state_.setStigmergyEnabled(config.p5.stigmergy);
   sim_ = std::make_unique<KinematicSim>(state_, toSimConfig(config, seed));
+}
+
+void EpisodeRunner::applyEavesdropping(int agent_a, int agent_b)
+{
+  // P5d: muzakere eden ciftin menzilindeki ucuncu ajanlar konusmayi duyar ve
+  // stigmerji bilgisini gunceller. Dogrudan mesaj gerektirmez.
+  for (const auto & listener : state_.agents()) {
+    if (!listener.alive || listener.id == agent_a || listener.id == agent_b) {
+      continue;
+    }
+    const double to_a =
+      swarm_bt_core::distance(listener.position, state_.agent(agent_a).position);
+    const double to_b =
+      swarm_bt_core::distance(listener.position, state_.agent(agent_b).position);
+    if (std::min(to_a, to_b) > config_.r_comm) {
+      continue;
+    }
+    metrics_.shared_cell_updates += state_.shareKnowledge(listener.id, agent_a);
+    metrics_.shared_cell_updates += state_.shareKnowledge(listener.id, agent_b);
+    ++metrics_.eavesdrop_events;
+  }
 }
 
 void EpisodeRunner::triggerCoordination()
@@ -80,6 +105,18 @@ void EpisodeRunner::handleEncounter(int agent_a, int agent_b)
   ++metrics_.coordination_events;
   bool changed = false;
 
+  // P5a - dogrudan mesaj: handshake sirasinda durum bilgisi degisilir ve
+  // stigmerji senkronize edilir (plan Bolum 2.2:
+  // sadece_bilgi_paylas_ve_devam_et).
+  if (config_.p5.direct_message) {
+    metrics_.shared_cell_updates += state_.shareKnowledge(agent_a, agent_b);
+  }
+
+  // P5d - kulak misafiri: menzildeki ucuncu taraflar da duyar.
+  if (config_.p5.eavesdrop) {
+    applyEavesdropping(agent_a, agent_b);
+  }
+
   // Bolum 2.3: arizadan kalan sahipsiz alan once devralinir.
   const int transferred =
     swarm_bt_core::AreaSwapNegotiator::distributeOrphans(&state_, agent_a, agent_b);
@@ -88,14 +125,18 @@ void EpisodeRunner::handleEncounter(int agent_a, int agent_b)
     changed = true;
   }
 
-  // Bolum 2.2: dengesizlik esigi asilmissa takas degerlendirilir.
-  const auto proposal = negotiator_.buildProposal(state_, agent_a, agent_b);
-  if (proposal.has_value()) {
-    ++metrics_.proposals;
-    if (proposal->reducesTotalDistance()) {
-      negotiator_.apply(&state_, *proposal);
-      ++metrics_.swaps;
-      changed = true;
+  // Bolum 2.2: takas muzakeresi DOGRUDAN MESAJ gerektirir. P5a kapaliysa
+  // ajanlar birbirinin kalan alanini ogrenemez, dolayisiyla dengesizlik
+  // hesaplanamaz ve takas teklifi kurulamaz.
+  if (config_.p5.direct_message) {
+    const auto proposal = negotiator_.buildProposal(state_, agent_a, agent_b);
+    if (proposal.has_value()) {
+      ++metrics_.proposals;
+      if (proposal->reducesTotalDistance()) {
+        negotiator_.apply(&state_, *proposal);
+        ++metrics_.swaps;
+        changed = true;
+      }
     }
   }
 
@@ -114,7 +155,11 @@ EpisodeMetrics EpisodeRunner::run()
 
     // Kendi alanini bitiren ajan, sahipsiz kalmis alani ustlenir. Yalnizca
     // karsilasmaya dayali devralma yetmiyor (bkz. claimOrphansIfIdle).
-    if (!state_.orphanedCells().empty()) {
+    //
+    // P5c - intent yayini: sahipsiz alanin varligi suruye duyuruldugu icin
+    // bosta kalan ajan bunu bir karsilasma beklemeden ogrenir. P5c kapaliysa
+    // devralma yalnizca karsilasma aninda mumkundur.
+    if (config_.p5.intent_broadcast && !state_.orphanedCells().empty()) {
       for (const auto & agent : state_.agents()) {
         const int claimed =
           swarm_bt_core::AreaSwapNegotiator::claimOrphansIfIdle(&state_, agent.id);
@@ -140,6 +185,28 @@ EpisodeMetrics EpisodeRunner::run()
   // P6b'de koordinasyon karari cok daha sik degerlendirilir ama karsilasma
   // sayisi degismez.
   metrics_.encounters = detector_.totalEncounters();
+
+  // Ajanlarin bilgi kapsamasi: gercekte taranmis hucrelerin ne kadarini
+  // biliyorlar. P5b (stigmerji) acikken 1.0; kapaliyken paylasilan bilgi kadar.
+  int visited_total = 0;
+  for (int cell_id = 0; cell_id < state_.area().cellCount(); ++cell_id) {
+    if (state_.isVisited(cell_id)) {
+      ++visited_total;
+    }
+  }
+  if (visited_total > 0) {
+    double known_sum = 0.0;
+    for (const auto & agent : state_.agents()) {
+      int known = 0;
+      for (int cell_id = 0; cell_id < state_.area().cellCount(); ++cell_id) {
+        if (state_.isVisited(cell_id) && state_.knowsVisited(agent.id, cell_id)) {
+          ++known;
+        }
+      }
+      known_sum += static_cast<double>(known) / visited_total;
+    }
+    metrics_.known_coverage_ratio = known_sum / state_.agentCount();
+  }
   metrics_.mission_time = state_.time();
   metrics_.ticks = sim_->tickCount();
   metrics_.coverage_complete = state_.coverageComplete();

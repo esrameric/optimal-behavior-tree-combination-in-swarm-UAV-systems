@@ -45,6 +45,15 @@ struct EpisodeMetrics
   int churn_events{0};
   /// Karsilasma olmadan, bosta kalan ajanin sahipsiz alani ustlenmesi sayisi.
   int idle_claims{0};
+  /// Iletisim yuku: karsilasmalarda karsi taraftan ogrenilen yeni hucre bilgisi
+  /// toplami (P5a dogrudan mesaj + P5d kulak misafiri uzerinden).
+  int shared_cell_updates{0};
+  /// Kulak misafiri (P5d) ile bilgi alan ucuncu taraf sayisi.
+  int eavesdrop_events{0};
+  /// Koşu sonunda, ajanlarin gercekte taranmis hucrelerin ne kadarini BILDIGI
+  /// (ajan basina ortalama oran). Stigmerji (P5b) acikken 1.0'dir; kapaliyken
+  /// ajan yalnizca kendi taradiklarini ve karsilasmalarda ogrendiklerini bilir.
+  double known_coverage_ratio{0.0};
   double assignment_stability{0.0};  ///< atama kararliligi: ajan basina atama degisikligi
   double churn_ratio{0.0};         ///< gercek degisiklige yol acan karsilasma / toplam
   double coverage_imbalance{0.0};  ///< koşu sonunda kalan alan std sapmasi
@@ -82,6 +91,10 @@ private:
 
   /// P6 tetikleme modeline gore, bu tick'te hangi ciftlerin islenecegini belirler.
   void triggerCoordination();
+
+  /// P5d kulak misafiri: muzakere eden ciftin menzilindeki ucuncu ajanlar da
+  /// bilgi alir.
+  void applyEavesdropping(int agent_a, int agent_b);
 
   /// P6a icin: bir sonraki yoklama zamani [s].
   double next_poll_time_{0.0};

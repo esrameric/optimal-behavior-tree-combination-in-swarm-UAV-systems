@@ -213,3 +213,19 @@ Dronelar artık görev alanı içinde tohumlanmış rastgele konumlardan kalkıy
 Boşta kalan ajanın sahipsiz alanı üstlenmesi (V12) bir karşılaşma sonucu
 değildir. Churn oranının payına dahil edilince oran 1'i aşabiliyordu (test
 yakaladı: 1 churn / 0 karşılaşma). Ayrı `idle_claims` sayacına alındı.
+
+### V15 — Stigmerjinin (P5b) görev süresine etkisi bu modelde bağlamıyor
+Bölgeler kesin partisyon olduğu için (her hücre tam olarak bir ajana ait, takas
+ve devralma da bunu korur) **mükerrer tarama hiç oluşmuyor**. Dolayısıyla
+stigmerjinin "başkasının taradığı hücreyi atla" faydası görev süresini
+değiştirmiyor — ölçüldü: `P5abc` ve `P5ac` birebir aynı süreyi veriyor.
+
+Stigmerjinin bu modelde bağladığı yer ajanların **bilgi durumu**: açıkken her
+ajan taranmış tüm hücreleri bilir (`known_coverage_ratio = 1.0`), kapalıyken
+yalnızca kendi taradıklarını ve karşılaşmalarda öğrendiklerini bilir. Bu ayrı
+bir metrik olarak ölçülüyor.
+
+Görev süresine etkisinin görüneceği yer Bölüm 2.2'nin **ortak tarama**
+(`joint_scan_baslat`) dalı: iki drone sınırda kasıtlı olarak örtüşen bir alanı
+tarar, ve orada stigmerji mükerrerliği önler. O dal negotiation alt-ağacıyla
+(Bölüm 5/Faz 0) birlikte geliyor; P5b'nin süre etkisi orada yeniden ölçülecek.

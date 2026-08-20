@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <set>
+#include <string>
 
 #include <swarm_bt_core/experiment_config.hpp>
 
@@ -224,5 +225,116 @@ TEST(EpisodeRunner, TumP6ModelleriKapsamayiTamamlar)
       EXPECT_TRUE(runWithTrigger(model, seed).coverage_complete)
         << "P6" << swarm_bt_core::toLetter(model) << " tohum " << seed;
     }
+  }
+}
+
+// --- P5 iletisim mekanizmalari (Bolum 3 / Bolum 4 OFAT ekseni) ---
+
+namespace
+{
+swarm_bt_sim::EpisodeMetrics runWithComms(const std::string & letters, int seed)
+{
+  ExperimentConfig config;
+  config.p5 = swarm_bt_core::CommunicationMechanisms::fromLetters(letters);
+  config.failure.enabled = true;
+  config.failure.time = -1.0;
+  return EpisodeRunner(config, seed).run();
+}
+
+double meanMissionTime(const std::string & letters, int repetitions = 10)
+{
+  double total = 0.0;
+  for (int seed = 0; seed < repetitions; ++seed) {
+    total += runWithComms(letters, seed).mission_time;
+  }
+  return total / repetitions;
+}
+}  // namespace
+
+TEST(EpisodeRunner, P5bStigmerjiAjanlarinBilgiKapsamasiniBelirler)
+{
+  // Stigmerji acikken her ajan taranmis TUM hucreleri bilir; kapaliyken
+  // yalnizca kendi taradiklarini ve karsilasmalarda ogrendiklerini bilir.
+  double with_stigmergy = 0.0;
+  double without_stigmergy = 0.0;
+  for (int seed = 0; seed < 10; ++seed) {
+    with_stigmergy += runWithComms("abc", seed).known_coverage_ratio;
+    without_stigmergy += runWithComms("ac", seed).known_coverage_ratio;
+  }
+  EXPECT_NEAR(with_stigmergy / 10.0, 1.0, 1e-9);
+  EXPECT_LT(without_stigmergy / 10.0, 1.0);
+}
+
+TEST(EpisodeRunner, P5bStigmerjiKesinBolmedeGorevSuresiniDegistirmez)
+{
+  // BULGU (README V15): bolgeler kesismedigi icin mukerrer tarama hic
+  // olusmuyor; stigmerjinin "baskasinin taradigini atla" faydasi bu modelde
+  // BAGLAMIYOR. Etkisinin gorunecegi yer Bolum 2.2'nin ortak tarama
+  // (joint_scan) dali; o dal negotiation alt-agaciyla birlikte gelecek.
+  EXPECT_DOUBLE_EQ(meanMissionTime("abc"), meanMissionTime("ac"));
+}
+
+TEST(EpisodeRunner, P5aOlmadanTakasMuzakeresiYapilamaz)
+{
+  // Dogrudan mesaj yoksa ajanlar birbirinin kalan alanini ogrenemez.
+  for (int seed = 0; seed < 10; ++seed) {
+    const auto metrics = runWithComms("bc", seed);
+    EXPECT_EQ(metrics.proposals, 0) << "tohum " << seed;
+    EXPECT_EQ(metrics.swaps, 0) << "tohum " << seed;
+  }
+}
+
+TEST(EpisodeRunner, P5aVarkenBilgiPaylasimiOlur)
+{
+  int with_direct = 0;
+  int without_direct = 0;
+  for (int seed = 0; seed < 10; ++seed) {
+    with_direct += runWithComms("ab", seed).shared_cell_updates;
+    without_direct += runWithComms("b", seed).shared_cell_updates;
+  }
+  EXPECT_GT(with_direct, without_direct);
+  EXPECT_EQ(without_direct, 0);
+}
+
+TEST(EpisodeRunner, P5dKulakMisafiriUcuncuTarafaBilgiTasir)
+{
+  int with_eavesdrop = 0;
+  for (int seed = 0; seed < 10; ++seed) {
+    ExperimentConfig config;
+    config.n_agents = 5;   // ucuncu tarafin menzilde olma sansi daha yuksek
+    config.p5 = swarm_bt_core::CommunicationMechanisms::fromLetters("abd");
+    config.failure.enabled = true;
+    config.failure.time = -1.0;
+    with_eavesdrop += EpisodeRunner(config, seed).run().eavesdrop_events;
+  }
+  EXPECT_GT(with_eavesdrop, 0);
+
+  for (int seed = 0; seed < 5; ++seed) {
+    EXPECT_EQ(runWithComms("abc", seed).eavesdrop_events, 0) << "tohum " << seed;
+  }
+}
+
+TEST(EpisodeRunner, P5cOlmadanBostaDevralmaYapilamaz)
+{
+  // Intent yayini yoksa sahipsiz alanin varligi suruye duyurulmaz; devralma
+  // yalnizca karsilasma aninda mumkundur.
+  for (int seed = 0; seed < 10; ++seed) {
+    EXPECT_EQ(runWithComms("ab", seed).idle_claims, 0) << "tohum " << seed;
+  }
+  int with_intent = 0;
+  for (int seed = 0; seed < 10; ++seed) {
+    with_intent += runWithComms("abc", seed).idle_claims;
+  }
+  EXPECT_GT(with_intent, 0);
+}
+
+TEST(EpisodeRunner, IletisimsizKoşuCokmedenBiter)
+{
+  // P5none: hicbir mekanizma yok. Gorev tamamlanmayabilir ama koşu cokmemeli.
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto metrics = runWithComms("none", seed);
+    EXPECT_GT(metrics.ticks, 0) << "tohum " << seed;
+    EXPECT_EQ(metrics.proposals, 0);
+    EXPECT_EQ(metrics.shared_cell_updates, 0);
   }
 }

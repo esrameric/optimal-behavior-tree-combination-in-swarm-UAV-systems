@@ -2,6 +2,7 @@
 #define SWARM_BT_CORE__SWARM_STATE_HPP_
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "swarm_bt_core/experiment_config.hpp"
@@ -38,6 +39,15 @@ struct AgentState
   /// Toplam kat edilen mesafe; takas tekliflerinin fayda hesabinda (Bolum 2.2)
   /// ve iletisim/hareket maliyeti raporlamasinda kullanilir.
   double distance_travelled{0.0};
+
+  /// Ajanin taranmis oldugunu BILDIGI hucreler (kendi yerel BT bellegi).
+  ///
+  /// Stigmerji (P5b) acikken ajan cevredeki izleri okuyabildigi icin bu bilgi
+  /// kuresel haritayla ayni olur. Kapaliyken ajan yalnizca kendi taradigi
+  /// hucreleri bilir; baskasinin bilgisini ancak dogrudan mesaj (P5a) ya da
+  /// kulak misafiri (P5d) yoluyla ogrenir. Bilmedigi bir hucreyi tekrar tarar --
+  /// stigmerjinin olculebilir faydasi tam olarak budur.
+  std::vector<uint8_t> known_visited;
 };
 
 /// Sürünün paylasilan dunya modeli.
@@ -75,8 +85,27 @@ public:
   /// kayan nokta kaymasi yaratir ve zaman siniri kontrolunu bir tick kaydirir.
   void setTime(double t) {time_ = t;}
 
+  /// Hucre gercekten tarandi mi (yer gercekligi; kapsama olcumu bunu kullanir).
   bool isVisited(int cell_id) const;
   void markVisited(int cell_id);
+
+  /// Stigmerji (P5b) etkin mi. Etkinse ajanlarin bilgisi kuresel haritayla ayni.
+  bool stigmergyEnabled() const {return stigmergy_;}
+  void setStigmergyEnabled(bool enabled) {stigmergy_ = enabled;}
+
+  /// Ajan bu hucrenin tarandigini BILIYOR mu (rota planlamasi bunu kullanir).
+  bool knowsVisited(int agent_id, int cell_id) const;
+
+  /// Hucreyi tarar: yer gercekligi ve tarayan ajanin bilgisi guncellenir.
+  void markVisitedBy(int agent_id, int cell_id);
+
+  /// Iki ajanin taranmis-hucre bilgisini birlestirir (dogrudan mesaj / kulak
+  /// misafiri ile stigmerji senkronizasyonu, plan Bolum 2.2).
+  /// \return karsi taraftan ogrenilen YENI hucre sayisi (iletisim yuku olcusu).
+  int shareKnowledge(int agent_a, int agent_b);
+
+  /// Ajanin bolgesinde, KENDI BILGISINE gore taranmamis kalan hucre sayisi.
+  int remainingCellsKnown(int agent_id) const;
 
   /// Ajanin bolgesinde henuz taranmamis hucre sayisi.
   int remainingCells(int agent_id) const;
@@ -122,6 +151,7 @@ private:
   PheromoneGrid visited_;
   PheromoneGrid interest_;
   std::vector<int> orphaned_cells_;
+  bool stigmergy_{true};
   double time_{0.0};
 };
 

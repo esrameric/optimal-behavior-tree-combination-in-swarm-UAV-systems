@@ -23,6 +23,8 @@ SwarmState::SwarmState(const MissionArea & area, int agent_count, double pheromo
   agents_.resize(static_cast<std::size_t>(agent_count));
   for (int i = 0; i < agent_count; ++i) {
     agents_[static_cast<std::size_t>(i)].id = i;
+    agents_[static_cast<std::size_t>(i)].known_visited.assign(
+      static_cast<std::size_t>(area.cellCount()), 0u);
   }
 }
 
@@ -50,6 +52,54 @@ bool SwarmState::isVisited(int cell_id) const
 void SwarmState::markVisited(int cell_id)
 {
   visited_.set(cell_id, 1.0);
+}
+
+bool SwarmState::knowsVisited(int agent_id, int cell_id) const
+{
+  if (stigmergy_) {
+    return isVisited(cell_id);
+  }
+  const auto & known = agent(agent_id).known_visited;
+  if (cell_id < 0 || cell_id >= static_cast<int>(known.size())) {
+    throw std::out_of_range("SwarmState::knowsVisited: gecersiz hucre kimligi");
+  }
+  return known[static_cast<std::size_t>(cell_id)] != 0u;
+}
+
+void SwarmState::markVisitedBy(int agent_id, int cell_id)
+{
+  markVisited(cell_id);
+  auto & known = agent(agent_id).known_visited;
+  if (cell_id < 0 || cell_id >= static_cast<int>(known.size())) {
+    throw std::out_of_range("SwarmState::markVisitedBy: gecersiz hucre kimligi");
+  }
+  known[static_cast<std::size_t>(cell_id)] = 1u;
+}
+
+int SwarmState::shareKnowledge(int agent_a, int agent_b)
+{
+  auto & known_a = agent(agent_a).known_visited;
+  auto & known_b = agent(agent_b).known_visited;
+  int learned = 0;
+  for (std::size_t i = 0; i < known_a.size(); ++i) {
+    if (known_a[i] != known_b[i]) {
+      ++learned;
+      known_a[i] = 1u;
+      known_b[i] = 1u;
+    }
+  }
+  return learned;
+}
+
+int SwarmState::remainingCellsKnown(int agent_id) const
+{
+  int remaining = 0;
+  for (const int cell_id : agent(agent_id).region) {
+    if (!knowsVisited(agent_id, cell_id)) {
+      ++remaining;
+    }
+  }
+  return remaining;
 }
 
 int SwarmState::remainingCells(int agent_id) const
