@@ -1,5 +1,6 @@
 #include "swarm_bt_core/swarm_state.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <random>
 #include <stdexcept>
@@ -278,6 +279,42 @@ void SwarmState::randomizeLaunchPositions(int seed)
   }
 }
 
+void SwarmState::placeInterestPoints(int count, int seed)
+{
+  interest_points_.clear();
+  if (count <= 0) {
+    return;
+  }
+  // Tohum, kalkis konumlarindan farkli bir akis kullansin ki ilgi noktalari
+  // ajan konumlariyla iliskili olmasin.
+  std::mt19937 rng(static_cast<std::mt19937::result_type>(seed * 2654435761u + 1u));
+  std::uniform_int_distribution<int> pick(0, area_.cellCount() - 1);
+  std::unordered_set<int> chosen;
+  const int limit = std::min(count, area_.cellCount());
+  while (static_cast<int>(chosen.size()) < limit) {
+    chosen.insert(pick(rng));
+  }
+  interest_points_.assign(chosen.begin(), chosen.end());
+  std::sort(interest_points_.begin(), interest_points_.end());
+}
+
+void SwarmState::placeInterestPointsAt(std::vector<int> cell_ids)
+{
+  for (const int cell_id : cell_ids) {
+    if (!area_.validCell(cell_id)) {
+      throw std::out_of_range("SwarmState::placeInterestPointsAt: gecersiz hucre kimligi");
+    }
+  }
+  std::sort(cell_ids.begin(), cell_ids.end());
+  cell_ids.erase(std::unique(cell_ids.begin(), cell_ids.end()), cell_ids.end());
+  interest_points_ = std::move(cell_ids);
+}
+
+bool SwarmState::hasInterestPoint(int cell_id) const
+{
+  return std::binary_search(interest_points_.begin(), interest_points_.end(), cell_id);
+}
+
 SwarmState makeSwarmState(const ExperimentConfig & config, int seed)
 {
   config.validate();
@@ -288,6 +325,7 @@ SwarmState makeSwarmState(const ExperimentConfig & config, int seed)
     state.randomizeLaunchPositions(seed);
   }
   allocateRegions(&state, config.p3, config.sim.random_launch);
+  state.placeInterestPoints(config.sim.interest_points, seed);
   return state;
 }
 

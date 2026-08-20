@@ -18,7 +18,11 @@ sim:
   waypoint_tolerance: 0.5
   pheromone_decay: 0.01
   interest_deposit: 1
+  interest_points: 12
+  joint_scan_threshold: 0.25
   poll_period: 5
+  random_launch: true
+  safety_radius: 5
 failure:
   enabled: false
   time: -1

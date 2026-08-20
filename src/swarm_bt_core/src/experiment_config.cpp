@@ -271,6 +271,12 @@ void ExperimentConfig::validate() const
   if (sim.pheromone_decay < 0.0 || sim.pheromone_decay > 1.0) {
     throw std::invalid_argument("pheromone_decay [0,1] araliginda olmali");
   }
+  if (sim.interest_points < 0) {
+    throw std::invalid_argument("interest_points negatif olamaz");
+  }
+  if (sim.joint_scan_threshold < 0.0) {
+    throw std::invalid_argument("joint_scan_threshold negatif olamaz");
+  }
   if (sim.safety_radius <= 0.0) {
     throw std::invalid_argument("safety_radius pozitif olmali");
   }
@@ -321,6 +327,8 @@ std::string ExperimentConfig::toYaml() const
       << YAML::Key << "waypoint_tolerance" << YAML::Value << sim.waypoint_tolerance
       << YAML::Key << "pheromone_decay" << YAML::Value << sim.pheromone_decay
       << YAML::Key << "interest_deposit" << YAML::Value << sim.interest_deposit
+      << YAML::Key << "interest_points" << YAML::Value << sim.interest_points
+      << YAML::Key << "joint_scan_threshold" << YAML::Value << sim.joint_scan_threshold
       << YAML::Key << "poll_period" << YAML::Value << sim.poll_period
       << YAML::Key << "random_launch" << YAML::Value << sim.random_launch
       << YAML::Key << "safety_radius" << YAML::Value << sim.safety_radius
@@ -367,6 +375,8 @@ ExperimentConfig ExperimentConfig::fromYamlString(const std::string & yaml_text)
   readIfPresent(sim, "waypoint_tolerance", &config.sim.waypoint_tolerance);
   readIfPresent(sim, "pheromone_decay", &config.sim.pheromone_decay);
   readIfPresent(sim, "interest_deposit", &config.sim.interest_deposit);
+  readIfPresent(sim, "interest_points", &config.sim.interest_points);
+  readIfPresent(sim, "joint_scan_threshold", &config.sim.joint_scan_threshold);
   readIfPresent(sim, "poll_period", &config.sim.poll_period);
   readIfPresent(sim, "random_launch", &config.sim.random_launch);
   readIfPresent(sim, "safety_radius", &config.sim.safety_radius);

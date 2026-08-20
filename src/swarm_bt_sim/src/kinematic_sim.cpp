@@ -65,7 +65,12 @@ void KinematicSim::moveAgent(AgentState & agent)
     agent.distance_travelled += remaining;
     agent.position = target;
     state_->markVisitedBy(agent.id, target_cell);
-    state_->interest().deposit(target_cell, config_.interest_deposit);
+    // Feromon yalnizca ILGI NOKTASI bulunan hucrede birakilir; her taranan
+    // hucreye birakilsaydi "sinirda ortak ilgi yuksek" kosulu yalnizca
+    // "sinir yakin zamanda tarandi" anlamina gelirdi.
+    if (state_->hasInterestPoint(target_cell)) {
+      state_->interest().deposit(target_cell, config_.interest_deposit);
+    }
     ++agent.next_waypoint;
     return;
   }

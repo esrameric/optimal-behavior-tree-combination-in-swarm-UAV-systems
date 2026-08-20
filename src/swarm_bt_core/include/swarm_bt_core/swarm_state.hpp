@@ -145,12 +145,26 @@ public:
   /// Bolge atamasina dokunmaz; yalnizca kalkis geometrisini belirler.
   void randomizeLaunchPositions(int seed);
 
+  /// Gorev alanina tohumlanmis rastgele ilgi noktalari serpistirir.
+  /// Feromon yalnizca bu hucrelerde birakilir (bkz. ExperimentConfig).
+  void placeInterestPoints(int count, int seed);
+
+  /// Ilgi noktalarini dogrudan verilen hucrelere yerlestirir (testler ve
+  /// tekrarlanabilir senaryo kurulumu icin).
+  void placeInterestPointsAt(std::vector<int> cell_ids);
+
+  /// Hucrede ilgi noktasi var mi.
+  bool hasInterestPoint(int cell_id) const;
+
+  const std::vector<int> & interestPoints() const {return interest_points_;}
+
 private:
   MissionArea area_;
   std::vector<AgentState> agents_;
   PheromoneGrid visited_;
   PheromoneGrid interest_;
   std::vector<int> orphaned_cells_;
+  std::vector<int> interest_points_;
   bool stigmergy_{true};
   double time_{0.0};
 };

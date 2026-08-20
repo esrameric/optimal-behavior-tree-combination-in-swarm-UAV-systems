@@ -79,7 +79,8 @@ if(BUILD_TESTING)
       test_area_swap
       test_failure_injector
       test_parameter_space
-      test_region_allocator)
+      test_region_allocator
+      test_interest_points)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()

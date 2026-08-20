@@ -69,7 +69,10 @@ sim:
   time_limit: 3000.0        # gorev zaman siniri [s]
   waypoint_tolerance: 0.5   # waypoint'e varmis sayilma yaricapi [m]
   pheromone_decay: 0.01     # ilgi feromonu tick basina sonumleme orani
-  interest_deposit: 1.0     # taranan hucreye birakilan feromon miktari
+  interest_deposit: 1.0     # ilgi noktasi bulununca birakilan feromon miktari
+  interest_points: 12       # alana serpistirilen ilgi noktasi sayisi (tohumlanmis)
+  joint_scan_threshold: 0.25  # sinirda ortak tarama tetikleme esigi (Bolum 2.2)
+  safety_radius: 5.0        # bunun altina inen ikili "carpisma" sayilir
   poll_period: 5.0          # P6a periyodik yoklama araligi [s]
 
 # --- Surpriz olay (plan Bolum 2.3) -----------------------------------------

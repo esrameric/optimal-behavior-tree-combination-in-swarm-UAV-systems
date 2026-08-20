@@ -119,7 +119,7 @@ TEST(KinematicSim, GecersizHizSapmasiReddedilir)
   EXPECT_THROW(KinematicSim(state, config), std::invalid_argument);
 }
 
-TEST(KinematicSim, WaypointeVarincaHucreZiyaretEdilirVeFeromonBirakilir)
+TEST(KinematicSim, WaypointeVarincaHucreZiyaretEdilir)
 {
   auto state = makeState(1, 0.0);
   const int first_cell = state.agent(0).region.front();
@@ -129,22 +129,39 @@ TEST(KinematicSim, WaypointeVarincaHucreZiyaretEdilirVeFeromonBirakilir)
   sim.step();
 
   EXPECT_TRUE(state.isVisited(first_cell));
-  EXPECT_GT(state.interest().at(first_cell), 0.0);
   EXPECT_EQ(state.agent(0).next_waypoint, 1u);
+}
+
+TEST(KinematicSim, FeromonYalnizcaIlgiNoktasindaBirakilir)
+{
+  // Feromon her taranan hucreye birakilsaydi "sinirda ortak ilgi yuksek"
+  // kosulu (plan Bolum 2.2) yalnizca "sinir yakin zamanda tarandi" anlamina
+  // gelir ve ortak tarama dali anlamsiz kalirdi.
+  auto without_point = makeState(1, 0.0);
+  KinematicSim sim_without(without_point, KinematicSimConfig{});
+  sim_without.step();
+  EXPECT_DOUBLE_EQ(without_point.interest().total(), 0.0);
+
+  auto with_point = makeState(1, 0.0);
+  const int first_cell = with_point.agent(0).region.front();
+  with_point.placeInterestPointsAt({first_cell});
+  KinematicSim sim_with(with_point, KinematicSimConfig{});
+  sim_with.step();
+  EXPECT_GT(with_point.interest().at(first_cell), 0.0);
 }
 
 TEST(KinematicSim, FeromonHerTickSonumlenir)
 {
   auto state = makeState(1, 0.5);
+  state.placeInterestPointsAt({state.agent(0).region.front()});
   KinematicSim sim(state, KinematicSimConfig{});
   sim.step();
   const double after_deposit = state.interest().total();
   ASSERT_GT(after_deposit, 0.0);
 
-  const double before = state.interest().total();
   sim.step();
   // Ikinci tick'te yeni hucreye varilmadi (mesafe > speed*dt), sadece sonumleme oldu.
-  EXPECT_LT(state.interest().total(), before);
+  EXPECT_LT(state.interest().total(), after_deposit);
 }
 
 TEST(KinematicSim, KapsamaTamamlanincaKoşuBiter)

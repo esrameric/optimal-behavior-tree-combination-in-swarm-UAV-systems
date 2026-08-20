@@ -72,7 +72,15 @@ struct SimulationParameters
   double time_limit{3000.0};      ///< gorev zaman siniri [s]
   double waypoint_tolerance{0.5};  ///< waypoint'e varmis sayilma yaricapi [m]
   double pheromone_decay{0.01};   ///< ilgi feromonu tick basina sonumleme orani
-  double interest_deposit{1.0};   ///< taranan hucreye birakilan feromon miktari
+  /// Bir ILGI NOKTASI bulundugunda o hucreye birakilan feromon miktari.
+  double interest_deposit{1.0};
+  /// Gorev alanina tohumlanmis olarak serpistirilen ilgi noktasi sayisi.
+  ///
+  /// Feromon her taranan hucreye degil, yalnizca ilgi noktasi bulunan hucreye
+  /// birakilir; aksi halde "sinirda ortak ilgi yuksek" kosulu (plan Bolum 2.2)
+  /// yalnizca "sinir yakin zamanda tarandi" anlamina gelirdi ve ortak tarama
+  /// dalini anlamsiz kilardi.
+  int interest_points{12};
   double poll_period{5.0};        ///< P6a periyodik yoklama araligi [s]
 
   /// Droneler gorev alani icinde rastgele (tohumlanmis) konumlardan kalkar.
@@ -91,6 +99,10 @@ struct SimulationParameters
   /// metriginin kod-seviyesi karsiligidir. Faz 2'de Gazebo gercek carpismayi
   /// uretecek; iki olcumun ayni yonde hareket edip etmedigi karsilastirilacak.
   double safety_radius{5.0};
+
+  /// Ortak tarama esigi: iki ajanin sinir bolgesindeki ortalama feromon bu
+  /// degeri asarsa "birlikte tara" dali tetiklenir (plan Bolum 2.2).
+  double joint_scan_threshold{0.25};
 };
 
 /// Bolum 2.3 - opsiyonel surpriz olay: bir drone'u gorev ortasinda arizalandirma.
