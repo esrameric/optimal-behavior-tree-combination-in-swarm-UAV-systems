@@ -92,3 +92,80 @@ TEST(ParameterSpace, GecersizTabanKombinasyonReddedilir)
   base.r_comm = -1.0;
   EXPECT_THROW(withScaleVariants(base), std::invalid_argument);
 }
+
+// --- Baseline ve OFAT eksenleri (Bolum 4) ---
+
+TEST(ParameterSpace, BaselinePlandakiKombinasyon)
+{
+  // Plan Bolum 4 onerisi: P2c + P3c + P4b + P5abc + P6c
+  const auto baseline = swarm_bt_core::baselineConfig();
+  EXPECT_EQ(baseline.experimentId(), "P2c_P3c_P4b_P5abc_P6c_N3");
+}
+
+TEST(ParameterSpace, VarsayilanKonfigurasyonBaselineIleAyni)
+{
+  // Bir deney dosyasi yalnizca farkli olan parametreyi yazdiginda geri kalani
+  // baseline olmali; bu ancak varsayilanlar baseline'a esitse dogru olur.
+  EXPECT_EQ(ExperimentConfig{}.experimentId(), swarm_bt_core::baselineConfig().experimentId());
+}
+
+TEST(ParameterSpace, BaselineKalibreEdilmisDegerleriKullanir)
+{
+  const auto baseline = swarm_bt_core::baselineConfig();
+  EXPECT_DOUBLE_EQ(baseline.r_comm, 60.0);          // Bolum 1
+  EXPECT_DOUBLE_EQ(baseline.swap_threshold, 0.20);  // Bolum 2.2
+}
+
+TEST(ParameterSpace, OfatEksenleriP4uIcermez)
+{
+  // P4 agacin YAPISINI degistirir; config ekseni degil, ayri XML dosyalari.
+  for (const auto & axis : swarm_bt_core::ofatAxes()) {
+    EXPECT_NE(axis.name, "P4");
+  }
+  EXPECT_EQ(swarm_bt_core::btArchitectureAxis().name, "P4");
+  EXPECT_EQ(swarm_bt_core::btArchitectureAxis().options.size(), 3u);
+}
+
+TEST(ParameterSpace, OfatVaryantlariBaselineIleBaslar)
+{
+  const auto baseline = swarm_bt_core::baselineConfig();
+  const auto variants = swarm_bt_core::ofatVariants(baseline);
+
+  ASSERT_FALSE(variants.empty());
+  EXPECT_EQ(variants.front().experimentId(), baseline.experimentId());
+}
+
+TEST(ParameterSpace, HerOfatVaryantiBaselineDenTekParametreFarkli)
+{
+  const auto baseline = swarm_bt_core::baselineConfig();
+  for (const auto & variant : swarm_bt_core::ofatVariants(baseline)) {
+    int differences = 0;
+    differences += (variant.p2 != baseline.p2) ? 1 : 0;
+    differences += (variant.p3 != baseline.p3) ? 1 : 0;
+    differences += (variant.p4 != baseline.p4) ? 1 : 0;
+    differences += (variant.p5.toLetters() != baseline.p5.toLetters()) ? 1 : 0;
+    differences += (variant.p6 != baseline.p6) ? 1 : 0;
+    EXPECT_LE(differences, 1) << variant.experimentId() << " birden fazla parametre degistirmis";
+  }
+}
+
+TEST(ParameterSpace, OfatVaryantlariBenzersizVeBaselineTekrarlanmaz)
+{
+  const auto variants = swarm_bt_core::ofatVariants(swarm_bt_core::baselineConfig());
+  std::set<std::string> ids;
+  for (const auto & variant : variants) {
+    EXPECT_TRUE(ids.insert(variant.experimentId()).second)
+      << variant.experimentId() << " iki kez uretilmis";
+  }
+  // 4 eksen (2+2+7 farkli P5+2) + P4'ten 2 = 15 varyant + baseline
+  EXPECT_EQ(variants.size(), 16u);
+}
+
+TEST(ParameterSpace, OfatVaryantlariOlcekleCogaltilinca32Koşu)
+{
+  // Plan Bolum 4: "BU ASAMADA HER KOMBINASYON HEM N=3 HEM N=5 ILE KOŞULUR"
+  const auto variants = swarm_bt_core::ofatVariants(swarm_bt_core::baselineConfig());
+  const auto with_scales = withScaleVariants(variants);
+  EXPECT_EQ(with_scales.size(), variants.size() * 2);
+  EXPECT_EQ(with_scales.size(), 32u);
+}
