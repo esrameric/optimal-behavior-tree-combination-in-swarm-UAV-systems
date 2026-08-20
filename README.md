@@ -229,3 +229,18 @@ Görev süresine etkisinin görüneceği yer Bölüm 2.2'nin **ortak tarama**
 (`joint_scan_baslat`) dalı: iki drone sınırda kasıtlı olarak örtüşen bir alanı
 tarar, ve orada stigmerji mükerrerliği önler. O dal negotiation alt-ağacıyla
 (Bölüm 5/Faz 0) birlikte geliyor; P5b'nin süre etkisi orada yeniden ölçülecek.
+
+### V16 — Hiyerarşik hibrit (P2b), N=3-5 ölçeğinde tam dağıtıktan ayırt edilemiyor
+P2b'nin P2c'den farkı, bir kümenin **bütün olarak** planlanmasıdır: lider,
+kümedeki tüm üyeleri görüp ardışık dengeleme adımları uygular. İkili bir kümede
+lider, ikili pazarlığın vereceği kararı verir — fark ancak **üç ve daha fazla**
+üyeli kümede ortaya çıkar.
+
+Ölçüldü: N=3 ve N=5'te, `r_comm = 60 m` ile üç drone aynı anda karşılıklı
+menzilde **neredeyse hiç** bulunmuyor. 20 koşuda oluşan üç-üyeli küme sayısı
+≤2. Sonuç: P2b ve P2c **birebir aynı** görev süresini veriyor (test bunu
+belgeliyor). P2a (tam merkezi) ise ikisinden de ayrışıyor.
+
+Bu, araştırma sorusu 2 için doğrudan bir bulgu: hiyerarşik koordinasyonun
+ayrışması için sürünün, aynı anda üç ajanı bir arada tutacak kadar **yoğun**
+olması gerekiyor. N=3→N=5 bu eşiği geçmiyor.

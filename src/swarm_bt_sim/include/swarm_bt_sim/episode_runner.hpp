@@ -2,6 +2,8 @@
 #define SWARM_BT_SIM__EPISODE_RUNNER_HPP_
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include <swarm_bt_core/area_swap.hpp>
 #include <swarm_bt_core/encounter_detector.hpp>
@@ -50,6 +52,16 @@ struct EpisodeMetrics
   int shared_cell_updates{0};
   /// Kulak misafiri (P5d) ile bilgi alan ucuncu taraf sayisi.
   int eavesdrop_events{0};
+  /// P2b'de kac kez gecici lider secildi (kume boyutu >= 2).
+  int leader_elections{0};
+  /// P2b'de olusan UC VE DAHA FAZLA uyeli kume sayisi. Hiyerarsik mimarinin
+  /// dagitiktan ayristigi tek durum budur: ikili kumede lider, ikili
+  /// pazarligin verecegi karari verir.
+  int multi_agent_clusters{0};
+  /// Iletisim yuku: koordinasyon icin gonderilen mesaj sayisi. P2a'da her
+  /// koordinasyon adiminda tum ajanlar merkeze rapor verir (N mesaj); P2b'de
+  /// kume buyuklugu kadar; P2c'de ikili basina 2.
+  int coordination_messages{0};
   /// Koşu sonunda, ajanlarin gercekte taranmis hucrelerin ne kadarini BILDIGI
   /// (ajan basina ortalama oran). Stigmerji (P5b) acikken 1.0'dir; kapaliyken
   /// ajan yalnizca kendi taradiklarini ve karsilasmalarda ogrendiklerini bilir.
@@ -95,6 +107,26 @@ private:
   /// P5d kulak misafiri: muzakere eden ciftin menzilindeki ucuncu ajanlar da
   /// bilgi alir.
   void applyEavesdropping(int agent_a, int agent_b);
+
+  /// P2'ye gore koordinasyonun KIMLER arasinda yapilacagini belirleyip yurutur.
+  /// (P6 "ne zaman", P2 "kimler arasinda" sorusunu cevaplar.)
+  void runCoordination(const std::vector<std::pair<int, int>> & pairs);
+
+  /// P2a - tam merkezi: merkez tum ajanlarin durumunu gorur, comm-range
+  /// gerektirmeden kuresel dengeleme yapar.
+  void runCentralCoordination();
+
+  /// P2b - hiyerarsik hibrit: menzilde birbirine bagli ajanlar bir kume olusturur,
+  /// kumeye gecici bir lider secilir ve karar lider araciligiyla verilir.
+  void runHierarchicalCoordination(const std::vector<std::pair<int, int>> & pairs);
+
+  /// Iki ajan arasinda tek bir dengeleme adimi (devralma + takas degerlendirmesi).
+  /// P2'nin uc secenegi de sonunda bunu cagirir; degisen yalnizca hangi ciftlerin
+  /// secildigi ve bunun icin ne kadar iletisim gerektigidir.
+  bool rebalancePair(int agent_a, int agent_b);
+
+  /// Canli ajanlar arasindan kalan alani en fazla ve en az olan cifti bulur.
+  std::pair<int, int> mostImbalancedPair(const std::vector<int> & agent_ids) const;
 
   /// P6a icin: bir sonraki yoklama zamani [s].
   double next_poll_time_{0.0};

@@ -1,7 +1,12 @@
 #include "swarm_bt_sim/episode_runner.hpp"
 
 #include <algorithm>
+#include <functional>
+#include <map>
 #include <memory>
+#include <numeric>
+#include <utility>
+#include <vector>
 
 namespace swarm_bt_sim
 {
@@ -65,9 +70,18 @@ void EpisodeRunner::triggerCoordination()
         // P6c: yalnizca comm-range GIRISI karar tetikler. Aradaki tick'lerde
         // hicbir koordinasyon isi yapilmaz.
         ++metrics_.detection_checks;
+        std::vector<std::pair<int, int>> entries;
         for (const auto & encounter : detector_.update(state_)) {
-          handleEncounter(encounter.agent_a, encounter.agent_b);
+          entries.emplace_back(encounter.agent_a, encounter.agent_b);
         }
+        // Merkezi mimaride ariza da bir olaydir: merkez, karsilasma beklemeden
+        // sahipsiz alani dagitabilmeli.
+        const bool central =
+          config_.p2 == swarm_bt_core::CoordinationArchitecture::kCentral;
+        if (entries.empty() && !(central && !state_.orphanedCells().empty())) {
+          return;
+        }
+        runCoordination(entries);
         break;
       }
 
@@ -77,9 +91,9 @@ void EpisodeRunner::triggerCoordination()
         // yeniden-atama firsati.
         ++metrics_.detection_checks;
         detector_.update(state_);
-        for (const auto & pair : detector_.currentPairs()) {
-          handleEncounter(pair.first, pair.second);
-        }
+        runCoordination(
+          std::vector<std::pair<int, int>>(
+            detector_.currentPairs().begin(), detector_.currentPairs().end()));
         break;
       }
 
@@ -92,17 +106,16 @@ void EpisodeRunner::triggerCoordination()
         next_poll_time_ = state_.time() + config_.sim.poll_period;
         ++metrics_.detection_checks;
         detector_.update(state_);
-        for (const auto & pair : detector_.currentPairs()) {
-          handleEncounter(pair.first, pair.second);
-        }
+        runCoordination(
+          std::vector<std::pair<int, int>>(
+            detector_.currentPairs().begin(), detector_.currentPairs().end()));
         break;
       }
   }
 }
 
-void EpisodeRunner::handleEncounter(int agent_a, int agent_b)
+bool EpisodeRunner::rebalancePair(int agent_a, int agent_b)
 {
-  ++metrics_.coordination_events;
   bool changed = false;
 
   // P5a - dogrudan mesaj: handshake sirasinda durum bilgisi degisilir ve
@@ -140,8 +153,182 @@ void EpisodeRunner::handleEncounter(int agent_a, int agent_b)
     }
   }
 
+  return changed;
+}
+
+std::pair<int, int> EpisodeRunner::mostImbalancedPair(const std::vector<int> & agent_ids) const
+{
+  int busiest = -1;
+  int idlest = -1;
+  double highest = -1.0;
+  double lowest = 2.0;
+  for (const int id : agent_ids) {
+    if (!state_.agent(id).alive) {
+      continue;
+    }
+    const double ratio = state_.remainingRatio(id);
+    if (ratio > highest) {
+      highest = ratio;
+      busiest = id;
+    }
+    if (ratio < lowest) {
+      lowest = ratio;
+      idlest = id;
+    }
+  }
+  return {busiest, idlest};
+}
+
+void EpisodeRunner::handleEncounter(int agent_a, int agent_b)
+{
+  ++metrics_.coordination_events;
+  metrics_.coordination_messages += 2;   // ikili handshake
+  if (rebalancePair(agent_a, agent_b)) {
+    ++metrics_.churn_events;
+  }
+}
+
+void EpisodeRunner::runCentralCoordination()
+{
+  // P2a: merkez tum ajanlarin durumunu gorur; comm-range gerekmez. Her
+  // koordinasyon adiminda tum ajanlar merkeze rapor verir.
+  ++metrics_.coordination_events;
+  metrics_.coordination_messages += state_.agentCount();
+
+  std::vector<int> alive;
+  for (const auto & agent : state_.agents()) {
+    if (agent.alive) {
+      alive.push_back(agent.id);
+    }
+  }
+  if (alive.size() < 2) {
+    return;
+  }
+
+  bool changed = false;
+
+  // Sahipsiz alan kuresel olarak dagitilir: merkez, her hucreyi o an en yakin
+  // canli ajana verir. Karsilasma beklemek gerekmez -- merkezi mimarinin
+  // dagitik mimariden en belirgin farki budur (bkz. README V12).
+  if (!state_.orphanedCells().empty()) {
+    for (std::size_t i = 0; i + 1 < alive.size(); ++i) {
+      const int transferred = swarm_bt_core::AreaSwapNegotiator::distributeOrphans(
+        &state_, alive[i], alive[i + 1]);
+      if (transferred > 0) {
+        metrics_.orphan_transfers += transferred;
+        changed = true;
+      }
+    }
+  }
+
+  // Kuresel dengeleme: en yuklu ve en bos ajan arasinda takas degerlendirilir.
+  const auto pair = mostImbalancedPair(alive);
+  if (pair.first >= 0 && pair.second >= 0 && pair.first != pair.second) {
+    const auto proposal = negotiator_.buildProposal(state_, pair.first, pair.second);
+    if (proposal.has_value()) {
+      ++metrics_.proposals;
+      if (proposal->reducesTotalDistance()) {
+        negotiator_.apply(&state_, *proposal);
+        ++metrics_.swaps;
+        changed = true;
+      }
+    }
+  }
+
   if (changed) {
     ++metrics_.churn_events;
+  }
+}
+
+void EpisodeRunner::runHierarchicalCoordination(const std::vector<std::pair<int, int>> & pairs)
+{
+  if (pairs.empty()) {
+    return;
+  }
+
+  // Menzil grafiginin bagli bilesenleri = kumeler (birlestir-bul).
+  std::vector<int> parent(static_cast<std::size_t>(state_.agentCount()));
+  std::iota(parent.begin(), parent.end(), 0);
+  std::function<int(int)> find = [&](int x) {
+      while (parent[static_cast<std::size_t>(x)] != x) {
+        parent[static_cast<std::size_t>(x)] =
+          parent[static_cast<std::size_t>(parent[static_cast<std::size_t>(x)])];
+        x = parent[static_cast<std::size_t>(x)];
+      }
+      return x;
+    };
+  for (const auto & pair : pairs) {
+    parent[static_cast<std::size_t>(find(pair.first))] = find(pair.second);
+  }
+
+  std::map<int, std::vector<int>> clusters;
+  for (const auto & agent : state_.agents()) {
+    if (agent.alive) {
+      clusters[find(agent.id)].push_back(agent.id);
+    }
+  }
+
+  for (const auto & entry : clusters) {
+    const auto & members = entry.second;
+    if (members.size() < 2) {
+      continue;
+    }
+
+    // Gecici lider secilir; kume uyeleri durumlarini lidere bildirir.
+    ++metrics_.leader_elections;
+    if (members.size() >= 3) {
+      ++metrics_.multi_agent_clusters;
+    }
+    ++metrics_.coordination_events;
+    metrics_.coordination_messages += static_cast<int>(members.size());
+
+    // Lider KUMENIN TAMAMI icin plan yapar: ikili pazarlikta her cift yalnizca
+    // kendi arasinda dengelenirken, lider kumeyi butun olarak gorup ardisik
+    // dengeleme adimlari uygular. Dagitik mimariden farki budur; kume iki
+    // kisilikse ikisi ayni sonuca varir.
+    bool cluster_changed = false;
+    if (!state_.orphanedCells().empty()) {
+      for (std::size_t i = 0; i + 1 < members.size(); ++i) {
+        const int transferred = swarm_bt_core::AreaSwapNegotiator::distributeOrphans(
+          &state_, members[i], members[i + 1]);
+        if (transferred > 0) {
+          metrics_.orphan_transfers += transferred;
+          cluster_changed = true;
+        }
+      }
+    }
+
+    for (std::size_t round = 0; round + 1 < members.size(); ++round) {
+      const auto pair = mostImbalancedPair(members);
+      if (pair.first < 0 || pair.second < 0 || pair.first == pair.second) {
+        break;
+      }
+      if (!rebalancePair(pair.first, pair.second)) {
+        break;   // dengeleme fayda vermiyor, tur bitti
+      }
+      cluster_changed = true;
+    }
+
+    if (cluster_changed) {
+      ++metrics_.churn_events;
+    }
+  }
+}
+
+void EpisodeRunner::runCoordination(const std::vector<std::pair<int, int>> & pairs)
+{
+  switch (config_.p2) {
+    case swarm_bt_core::CoordinationArchitecture::kCentral:
+      runCentralCoordination();
+      break;
+    case swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid:
+      runHierarchicalCoordination(pairs);
+      break;
+    case swarm_bt_core::CoordinationArchitecture::kDistributed:
+      for (const auto & pair : pairs) {
+        handleEncounter(pair.first, pair.second);
+      }
+      break;
   }
 }
 

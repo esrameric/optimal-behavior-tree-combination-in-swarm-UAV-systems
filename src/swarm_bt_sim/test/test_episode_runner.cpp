@@ -338,3 +338,120 @@ TEST(EpisodeRunner, IletisimsizKoşuCokmedenBiter)
     EXPECT_EQ(metrics.shared_cell_updates, 0);
   }
 }
+
+// --- P2 koordinasyon mimarileri (Bolum 3 / Bolum 4 OFAT ekseni) ---
+
+namespace
+{
+swarm_bt_sim::EpisodeMetrics runWithArchitecture(
+  swarm_bt_core::CoordinationArchitecture architecture, int seed, int n = 3)
+{
+  ExperimentConfig config;
+  config.n_agents = n;
+  config.p2 = architecture;
+  config.failure.enabled = true;
+  config.failure.time = -1.0;
+  config.failure.agent_id = 1;
+  return EpisodeRunner(config, seed).run();
+}
+}  // namespace
+
+TEST(EpisodeRunner, TumP2MimarileriKapsamayiTamamlar)
+{
+  for (const auto architecture : {
+    swarm_bt_core::CoordinationArchitecture::kCentral,
+    swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid,
+    swarm_bt_core::CoordinationArchitecture::kDistributed})
+  {
+    for (int seed = 0; seed < 5; ++seed) {
+      EXPECT_TRUE(runWithArchitecture(architecture, seed).coverage_complete)
+        << "P2" << swarm_bt_core::toLetter(architecture) << " tohum " << seed;
+    }
+  }
+}
+
+TEST(EpisodeRunner, P2aMerkeziMimariDevralmayiKarsilasmaBeklemedenYapar)
+{
+  // Dagitik mimaride N=3'te ortadaki drone arizalanirsa hayatta kalanlar
+  // bulusmayabilir (README V12). Merkez bunu beklemez.
+  double central_time = 0.0;
+  double distributed_time = 0.0;
+  for (int seed = 0; seed < 10; ++seed) {
+    central_time +=
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kCentral, seed).mission_time;
+    distributed_time +=
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kDistributed, seed).mission_time;
+  }
+  EXPECT_LT(central_time, distributed_time);
+}
+
+TEST(EpisodeRunner, P2aMerkeziMimariDahaCokMesajUretir)
+{
+  // Merkezi mimaride her koordinasyon adiminda tum ajanlar merkeze rapor verir.
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto central =
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kCentral, seed, 5);
+    const auto distributed =
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kDistributed, seed, 5);
+    EXPECT_GT(central.coordination_messages, distributed.coordination_messages)
+      << "tohum " << seed;
+  }
+}
+
+TEST(EpisodeRunner, P2bHiyerarsikMimarideGeciciLiderSecilir)
+{
+  int elections = 0;
+  for (int seed = 0; seed < 10; ++seed) {
+    elections += runWithArchitecture(
+      swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid, seed, 5).leader_elections;
+  }
+  EXPECT_GT(elections, 0);
+
+  // Dagitik ve merkezi mimarilerde lider secimi olmamali.
+  for (int seed = 0; seed < 5; ++seed) {
+    EXPECT_EQ(
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kDistributed, seed)
+      .leader_elections, 0);
+    EXPECT_EQ(
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kCentral, seed)
+      .leader_elections, 0);
+  }
+}
+
+TEST(EpisodeRunner, P2aMerkeziMimariDigerIkisindenAyrisir)
+{
+  double central = 0.0;
+  double hierarchical = 0.0;
+  double distributed = 0.0;
+  for (int seed = 0; seed < 10; ++seed) {
+    central +=
+      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kCentral, seed).mission_time;
+    hierarchical += runWithArchitecture(
+      swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid, seed).mission_time;
+    distributed += runWithArchitecture(
+      swarm_bt_core::CoordinationArchitecture::kDistributed, seed).mission_time;
+  }
+  EXPECT_NE(central, distributed);
+  EXPECT_NE(central, hierarchical);
+}
+
+TEST(EpisodeRunner, P2bHiyerarsikMimariBuOlceklerdeDagitiktanAyirtEdilemiyor)
+{
+  // BULGU (README V16): N=3-5'te r_comm=60 m ile UC drone ayni anda neredeyse
+  // hicbir zaman karsilikli menzilde olmuyor; kumeler hep ikili kaliyor ve
+  // ikili kumede lider, ikili pazarligin verecegi karari veriyor.
+  int large_clusters = 0;
+  for (const int n : {3, 5}) {
+    for (int seed = 0; seed < 10; ++seed) {
+      const auto hierarchical = runWithArchitecture(
+        swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid, seed, n);
+      const auto distributed = runWithArchitecture(
+        swarm_bt_core::CoordinationArchitecture::kDistributed, seed, n);
+      large_clusters += hierarchical.multi_agent_clusters;
+      EXPECT_DOUBLE_EQ(hierarchical.mission_time, distributed.mission_time)
+        << "N=" << n << " tohum " << seed;
+    }
+  }
+  // Bulgunun sayisal dayanagi: uc ve daha fazla uyeli kume neredeyse hic yok.
+  EXPECT_LE(large_clusters, 2) << "beklenenden cok buyuk kume olustu";
+}
