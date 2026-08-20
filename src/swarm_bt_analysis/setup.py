@@ -31,6 +31,7 @@ setup(
             'phase_comparison = swarm_bt_analysis.phase_comparison:main',
             'make_figures = swarm_bt_analysis.plots:main',
             'stability_hypothesis = swarm_bt_analysis.stability_hypothesis:main',
+            'parameter_sensitivity = swarm_bt_analysis.parameter_sensitivity:main',
         ],
     },
 )
