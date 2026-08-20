@@ -29,6 +29,7 @@ setup(
             'metrics_table = swarm_bt_analysis.metrics_table:main',
             'select_finalists = swarm_bt_analysis.finalists:main',
             'phase_comparison = swarm_bt_analysis.phase_comparison:main',
+            'make_figures = swarm_bt_analysis.plots:main',
         ],
     },
 )
