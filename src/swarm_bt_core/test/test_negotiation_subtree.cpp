@@ -284,3 +284,70 @@ TEST(NegotiationSubtree, AyniOrtakIkiKezKuyruklanmaz)
   EXPECT_EQ(harness.tickFor(0), BT::NodeStatus::SUCCESS);
   EXPECT_FALSE(harness.context().hasPendingEncounter(0));
 }
+
+// --- Kapanis testi (plan Bolum 10): uc dalin da GERCEKTEN calistigi ---
+
+TEST(NegotiationSubtree, UcDalinDaCalistigiTekSenaryodaGosterilir)
+{
+  // Dallar tek tek yukarida sinandi. Bu test, alt-agacin BUTUN olarak
+  // eksiksiz oldugunu gosterir: ayni kosum takiminda, kosullar degistikce
+  // uc dal da sirayla devreye giriyor mu?
+  auto config = baseConfig();
+  config.sim.joint_scan_threshold = 0.01;
+  NegotiationHarness harness(config);
+
+  // 1) Hicbir esik asilmamis -> bilgi paylasimi dali
+  harness.context().queueEncounter(0, 1);
+  ASSERT_EQ(harness.tickFor(0), BT::NodeStatus::SUCCESS);
+  EXPECT_EQ(harness.counters().info_shares, 1);
+  EXPECT_EQ(harness.counters().joint_scans, 0);
+  EXPECT_EQ(harness.counters().swaps_applied, 0);
+
+  // 2) Sinirda feromon yuksek -> ortak tarama dali
+  for (const int cell_id : AreaSwapNegotiator::boundaryCells(harness.state(), 0, 1)) {
+    harness.state().interest().deposit(cell_id, 1.0);
+  }
+  harness.context().queueEncounter(0, 1);
+  ASSERT_EQ(harness.tickFor(0), BT::NodeStatus::SUCCESS);
+  EXPECT_EQ(harness.counters().joint_scans, 1) << "ortak tarama dali calismadi";
+  EXPECT_EQ(harness.counters().info_shares, 1) << "bilgi paylasimi tekrar calismis";
+
+  // 3) Buyuk dengesizlik -> takas dali (en yuksek oncelikli)
+  harness.state().interest().reset();
+  scanFraction(&harness.state(), 0, 0.85);
+  harness.context().queueEncounter(0, 1);
+  ASSERT_EQ(harness.tickFor(0), BT::NodeStatus::SUCCESS);
+  EXPECT_GT(harness.counters().swap_proposals, 0) << "takas dali calismadi";
+
+  // Uc dal da en az bir kez sonuca baglandi.
+  EXPECT_EQ(harness.counters().status_exchanges, 3);
+}
+
+TEST(NegotiationSubtree, HerKarsilasmaTamOlarakBirDalaBaglanir)
+{
+  // Alt-agacin Fallback yapisinin amaci: hicbir karsilasma cevapsiz kalmasin,
+  // ve birden fazla dal ayni anda calismasin.
+  auto config = baseConfig();
+  config.sim.joint_scan_threshold = 0.01;
+
+  for (int scenario = 0; scenario < 3; ++scenario) {
+    NegotiationHarness harness(config);
+    if (scenario == 1) {
+      for (const int cell_id : AreaSwapNegotiator::boundaryCells(harness.state(), 0, 1)) {
+        harness.state().interest().deposit(cell_id, 1.0);
+      }
+    } else if (scenario == 2) {
+      scanFraction(&harness.state(), 0, 0.85);
+    }
+
+    harness.context().queueEncounter(0, 1);
+    ASSERT_EQ(harness.tickFor(0), BT::NodeStatus::SUCCESS) << "senaryo " << scenario;
+
+    const auto & counters = harness.counters();
+    const int resolved =
+      counters.swaps_applied + counters.joint_scans + counters.info_shares;
+    EXPECT_EQ(resolved, 1)
+      << "senaryo " << scenario << ": tam olarak bir dal sonuca baglanmali (bulunan: "
+      << resolved << ")";
+  }
+}
