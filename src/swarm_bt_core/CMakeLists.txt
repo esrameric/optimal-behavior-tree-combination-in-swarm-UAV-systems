@@ -26,6 +26,7 @@ add_library(${PROJECT_NAME} SHARED
   src/swarm_state.cpp
   src/encounter_detector.cpp
   src/experiment_config.cpp
+  src/bt_node_manifest.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -68,10 +69,13 @@ if(BUILD_TESTING)
       test_pheromone_grid
       test_swarm_state
       test_encounter_detector
-      test_experiment_config)
+      test_experiment_config
+      test_bt_xml_variants)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()
+  target_compile_definitions(test_bt_xml_variants PRIVATE
+    SWARM_BT_XML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/bt_xml")
 endif()
 
 ament_package()

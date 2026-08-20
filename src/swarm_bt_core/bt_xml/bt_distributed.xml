@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  P4b - OZDES DAGITIK BT
+  ======================
+  Her drone bu agacin AYNI kopyasini kendi blackboard'u ile calistirir. Merkez
+  yoktur; koordinasyon yalnizca karsilasma anindaki negotiation alt-agaci
+  uzerinden olusur. Plan Bolum 4'te onerilen baseline bu varyanti kullanir.
+
+  Yapisal imza: agac koku ajan duzeyindedir ve dallar SIRALI onceliklidir:
+  ScanNextCell bir kez RUNNING dondugunde, o tarama adimi bitene kadar
+  karsilasma dali yeniden degerlendirilmez (kesintisiz tarama). Olay-gudumlu
+  varyanttan (P4c) farki tam olarak budur.
+-->
+<root BTCPP_format="4" main_tree_to_execute="DistributedAgentTree">
+
+  <BehaviorTree ID="DistributedAgentTree">
+    <Sequence name="dagitik_ajan_dongusu">
+
+      <!-- Bolum 2.3: arizalandirilan drone burada FAILURE verir ve durur. -->
+      <IsAgentAlive/>
+
+      <!-- Bolum 2.1 adim 2 / P3: atama dagitik olarak (CBBA / Contract Net)
+           yapilir; merkezi bir tahsisci yoktur. -->
+      <Fallback name="baslangic_atamasi">
+        <IsAllocationDone/>
+        <AllocateInitialRegions/>
+      </Fallback>
+
+      <Fallback name="gorev">
+        <!-- Bolum 2.1 adim 6: kendi payima dusen alan bittiyse gorev tamam. -->
+        <IsCoverageComplete/>
+
+        <Sequence name="tara_ve_muzakere_et">
+          <Fallback name="karsilasma_islemesi">
+            <Inverter>
+              <HasPendingEncounter/>
+            </Inverter>
+            <SubTree ID="NegotiationSubtree"/>
+          </Fallback>
+
+          <!-- Bolum 2.1 adim 3-4: lawn-mower tarama + stigmerji isaretleme. -->
+          <ScanNextCell/>
+        </Sequence>
+      </Fallback>
+
+    </Sequence>
+  </BehaviorTree>
+
+</root>

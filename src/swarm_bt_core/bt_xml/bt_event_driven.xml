@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  P4c - OLAY-GUDUMLU BT (Micros.BT tarzi)
+  =======================================
+  Her drone kendi agacini calistirir (P4b gibi), ANCAK dallar her tick yeniden
+  degerlendirilir: yuksek oncelikli bir olay, calismakta olan tarama adimini
+  KESER (preemption).
+
+  Yapisal imza: reaktif kontrol dugumleri (ReactiveSequence / ReactiveFallback).
+  ScanNextCell burada "arka plan gorevi"dir; karsilasma ya da sinirda ortak
+  ilgi olayi dogdugu anda halt edilir. Bu, N arttikca olay sikligi da arttigi
+  icin ölçek duyarliliginin en yuksek beklendigi varyanttir: her yeni olay
+  calisan planı boler.
+-->
+<root BTCPP_format="4" main_tree_to_execute="EventDrivenAgentTree">
+
+  <BehaviorTree ID="EventDrivenAgentTree">
+    <ReactiveSequence name="olay_gudumlu_ajan_dongusu">
+
+      <!-- Bolum 2.3: ariza her tick yeniden kontrol edilir; arizalanan drone
+           calisan tarama adimini de aninda birakir. -->
+      <IsAgentAlive/>
+
+      <Fallback name="baslangic_atamasi">
+        <IsAllocationDone/>
+        <AllocateInitialRegions/>
+      </Fallback>
+
+      <ReactiveFallback name="oncelikli_olaylar">
+
+        <!-- Oncelik 1 - Bolum 2.1 adim 5: comm-range girisi. -->
+        <Sequence name="olay_karsilasma">
+          <HasPendingEncounter/>
+          <SubTree ID="NegotiationSubtree"/>
+        </Sequence>
+
+        <!-- Oncelik 2 - Bolum 2.2: sinirda ortak ilgi, karsilasma olmadan da
+             tetiklenebilir (stigmerji uzerinden dolayli koordinasyon). -->
+        <Sequence name="olay_sinirda_ortak_ilgi">
+          <IsBoundaryPheromoneHigh/>
+          <StartJointScan/>
+        </Sequence>
+
+        <!-- Oncelik 3 - arka plan gorevi: kendi bolgeni tara. -->
+        <ScanNextCell/>
+
+      </ReactiveFallback>
+    </ReactiveSequence>
+  </BehaviorTree>
+
+</root>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  P4a - TEK MERKEZI BT
+  ===================
+  Tum suru icin TEK bir agac tickler. Ajanlarin kendi agaci yoktur: merkez
+  once tum durumu toplar, karari kendisi verir, sonra hedefleri dagitir.
+
+  Yapisal imza (digerlerinden farki): agac koku suru duzeyindedir, ajan
+  duzeyinde degil; CollectSwarmState/DispatchWaypoints ciftini yalnizca bu
+  varyant icerir. Olceklendikce merkezdeki tek karar noktasinin darbogaz olup
+  olmadigi (N=3 -> N=5) bu varyantla olculur.
+-->
+<root BTCPP_format="4" main_tree_to_execute="CentralSwarmTree">
+
+  <BehaviorTree ID="CentralSwarmTree">
+    <Sequence name="merkezi_suru_dongusu">
+
+      <!-- Bolum 2.1 adim 2: alt-bolge atamasi merkezde, bir kez yapilir. -->
+      <Fallback name="baslangic_atamasi">
+        <IsAllocationDone/>
+        <AllocateInitialRegions/>
+      </Fallback>
+
+      <!-- P2a: tum ajanlarin durumu merkeze akar. -->
+      <CollectSwarmState/>
+
+      <!-- Bolum 2.1 adim 5: karsilasma varsa merkez negotiation'i yurutur.
+           Karsilasma yoksa Inverter SUCCESS dondurur ve dal atlanir. -->
+      <Fallback name="karsilasma_islemesi">
+        <Inverter>
+          <HasPendingEncounter/>
+        </Inverter>
+        <SubTree ID="NegotiationSubtree"/>
+      </Fallback>
+
+      <!-- P2a: hedefler merkezden dagitilir; ajanlar yalnizca yurutur. -->
+      <DispatchWaypoints/>
+
+    </Sequence>
+  </BehaviorTree>
+
+</root>
