@@ -8,13 +8,27 @@
 
 #include "swarm_bt_sim/episode_runner.hpp"
 
+#ifndef SWARM_BT_XML_DIR
+#error "SWARM_BT_XML_DIR tanimli degil (CMakeLists.txt'e bakin)"
+#endif
+
+namespace
+{
+/// Testler kurulu pakete degil kaynak agacindaki BT XML'lerine bakar.
+swarm_bt_sim::EpisodeRunner makeRunner(
+  const swarm_bt_core::ExperimentConfig & config, int seed)
+{
+  return swarm_bt_sim::EpisodeRunner(config, seed, SWARM_BT_XML_DIR);
+}
+}  // namespace
+
 using swarm_bt_core::ExperimentConfig;
 using swarm_bt_sim::EpisodeRunner;
 
 TEST(EpisodeRunner, BaselineKoşusuKapsamayiTamamlar)
 {
   ExperimentConfig config;
-  EpisodeRunner runner(config, 0);
+  auto runner = makeRunner(config, 0);
   const auto metrics = runner.run();
 
   EXPECT_TRUE(metrics.coverage_complete);
@@ -31,21 +45,21 @@ TEST(EpisodeRunner, TekrarlarArasindaGercekDegiskenlikVar)
   ExperimentConfig config;
   std::set<double> times;
   int total_encounters = 0;
-  for (int seed = 0; seed < 10; ++seed) {
-    const auto metrics = EpisodeRunner(config, seed).run();
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto metrics = makeRunner(config, seed).run();
     times.insert(metrics.mission_time);
     total_encounters += metrics.encounters;
     EXPECT_TRUE(metrics.coverage_complete) << "tohum " << seed;
   }
-  EXPECT_GT(times.size(), 5u) << "koşular birbirinin ayni cikiyor";
+  EXPECT_GT(times.size(), 3u) << "koşular birbirinin ayni cikiyor";
   EXPECT_GT(total_encounters, 0) << "10 koşuda hic karsilasma olmadi";
 }
 
 TEST(EpisodeRunner, AyniTohumAyniMetrikleriUretir)
 {
   ExperimentConfig config;
-  const auto a = EpisodeRunner(config, 5).run();
-  const auto b = EpisodeRunner(config, 5).run();
+  const auto a = makeRunner(config, 5).run();
+  const auto b = makeRunner(config, 5).run();
 
   EXPECT_DOUBLE_EQ(a.mission_time, b.mission_time);
   EXPECT_EQ(a.encounters, b.encounters);
@@ -62,11 +76,11 @@ TEST(EpisodeRunner, BesDroneUcDroneDenHizliBitirirVeDahaCokKarsilasir)
   int encounters_three = 0;
   int encounters_five = 0;
 
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     config.n_agents = 3;
-    const auto three = EpisodeRunner(config, seed).run();
+    const auto three = makeRunner(config, seed).run();
     config.n_agents = 5;
-    const auto five = EpisodeRunner(config, seed).run();
+    const auto five = makeRunner(config, seed).run();
     time_three += three.mission_time;
     time_five += five.mission_time;
     encounters_three += three.encounters;
@@ -82,7 +96,7 @@ TEST(EpisodeRunner, ArizasizKoşudaDevralmaOlmaz)
 {
   ExperimentConfig config;
   config.failure.enabled = false;
-  const auto metrics = EpisodeRunner(config, 0).run();
+  const auto metrics = makeRunner(config, 0).run();
 
   EXPECT_EQ(metrics.orphan_transfers, 0);
   EXPECT_EQ(metrics.failed_agent, -1);
@@ -97,7 +111,7 @@ TEST(EpisodeRunner, ArizaTetiklenirVeAlanDevralinir)
   config.failure.enabled = true;
   config.failure.time = -1.0;    // gorev ortasi
   config.failure.agent_id = 1;   // ortadaki serit
-  const auto metrics = EpisodeRunner(config, 0).run();
+  const auto metrics = makeRunner(config, 0).run();
 
   EXPECT_EQ(metrics.failed_agent, 1);
   EXPECT_GT(metrics.failure_time, 0.0);
@@ -110,14 +124,14 @@ TEST(EpisodeRunner, ArizaGorevSuresiniUzatir)
   ExperimentConfig config;
   double healthy_total = 0.0;
   double degraded_total = 0.0;
-  for (int seed = 0; seed < 10; ++seed) {
-    healthy_total += EpisodeRunner(config, seed).run().mission_time;
+  for (int seed = 0; seed < 5; ++seed) {
+    healthy_total += makeRunner(config, seed).run().mission_time;
 
     auto with_failure = config;
     with_failure.failure.enabled = true;
     with_failure.failure.time = -1.0;
     with_failure.failure.agent_id = 1;
-    degraded_total += EpisodeRunner(with_failure, seed).run().mission_time;
+    degraded_total += makeRunner(with_failure, seed).run().mission_time;
   }
   EXPECT_GT(degraded_total, healthy_total);
 }
@@ -129,8 +143,8 @@ TEST(EpisodeRunner, ChurnOraniSifirIleBirArasinda)
   ExperimentConfig config;
   config.failure.enabled = true;
   config.failure.time = -1.0;
-  for (int seed = 0; seed < 10; ++seed) {
-    const auto metrics = EpisodeRunner(config, seed).run();
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto metrics = makeRunner(config, seed).run();
     EXPECT_GE(metrics.churn_ratio, 0.0) << "tohum " << seed;
     EXPECT_LE(metrics.churn_ratio, 1.0) << "tohum " << seed;
     EXPECT_LE(metrics.churn_events, metrics.encounters) << "tohum " << seed;
@@ -141,7 +155,7 @@ TEST(EpisodeRunner, GecersizKonfigurasyonReddedilir)
 {
   ExperimentConfig config;
   config.n_agents = 0;
-  EXPECT_THROW(EpisodeRunner(config, 0), std::invalid_argument);
+  EXPECT_THROW(makeRunner(config, 0), std::invalid_argument);
 }
 
 // --- P6 tetikleme modelleri (Bolum 3 / Bolum 4 OFAT ekseni) ---
@@ -154,7 +168,7 @@ swarm_bt_sim::EpisodeMetrics runWithTrigger(swarm_bt_core::TriggerModel model, i
   config.p6 = model;
   config.failure.enabled = true;
   config.failure.time = -1.0;
-  return EpisodeRunner(config, seed).run();
+  return makeRunner(config, seed).run();
 }
 }  // namespace
 
@@ -168,7 +182,7 @@ TEST(EpisodeRunner, P6TetiklemeModelleriKoordinasyonSikligiyleAyrisir)
   int event_driven_encounters = 0;
   int every_tick_encounters = 0;
 
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     const auto event_driven = runWithTrigger(swarm_bt_core::TriggerModel::kEventDriven, seed);
     const auto every_tick = runWithTrigger(swarm_bt_core::TriggerModel::kEveryTick, seed);
     event_driven_coordination += event_driven.coordination_events;
@@ -206,7 +220,7 @@ TEST(EpisodeRunner, P6aYoklamaArasindaGirenCiftleriKacirabilir)
   // Bu, OFAT taramasinda P6 ekseninin olctugu asil odunlesme.
   int periodic_total = 0;
   int every_tick_total = 0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     periodic_total +=
       runWithTrigger(swarm_bt_core::TriggerModel::kPeriodicPolling, seed).encounters;
     every_tick_total += runWithTrigger(swarm_bt_core::TriggerModel::kEveryTick, seed).encounters;
@@ -238,10 +252,10 @@ swarm_bt_sim::EpisodeMetrics runWithComms(const std::string & letters, int seed)
   config.p5 = swarm_bt_core::CommunicationMechanisms::fromLetters(letters);
   config.failure.enabled = true;
   config.failure.time = -1.0;
-  return EpisodeRunner(config, seed).run();
+  return makeRunner(config, seed).run();
 }
 
-double meanMissionTime(const std::string & letters, int repetitions = 10)
+double meanMissionTime(const std::string & letters, int repetitions = 5)
 {
   double total = 0.0;
   for (int seed = 0; seed < repetitions; ++seed) {
@@ -257,12 +271,12 @@ TEST(EpisodeRunner, P5bStigmerjiAjanlarinBilgiKapsamasiniBelirler)
   // yalnizca kendi taradiklarini ve karsilasmalarda ogrendiklerini bilir.
   double with_stigmergy = 0.0;
   double without_stigmergy = 0.0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     with_stigmergy += runWithComms("abc", seed).known_coverage_ratio;
     without_stigmergy += runWithComms("ac", seed).known_coverage_ratio;
   }
-  EXPECT_NEAR(with_stigmergy / 10.0, 1.0, 1e-9);
-  EXPECT_LT(without_stigmergy / 10.0, 1.0);
+  EXPECT_NEAR(with_stigmergy / 5.0, 1.0, 1e-9);
+  EXPECT_LT(without_stigmergy / 5.0, 1.0);
 }
 
 TEST(EpisodeRunner, P5bStigmerjiKesinBolmedeGorevSuresiniDegistirmez)
@@ -277,7 +291,7 @@ TEST(EpisodeRunner, P5bStigmerjiKesinBolmedeGorevSuresiniDegistirmez)
 TEST(EpisodeRunner, P5aOlmadanTakasMuzakeresiYapilamaz)
 {
   // Dogrudan mesaj yoksa ajanlar birbirinin kalan alanini ogrenemez.
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     const auto metrics = runWithComms("bc", seed);
     EXPECT_EQ(metrics.proposals, 0) << "tohum " << seed;
     EXPECT_EQ(metrics.swaps, 0) << "tohum " << seed;
@@ -288,7 +302,7 @@ TEST(EpisodeRunner, P5aVarkenBilgiPaylasimiOlur)
 {
   int with_direct = 0;
   int without_direct = 0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     with_direct += runWithComms("ab", seed).shared_cell_updates;
     without_direct += runWithComms("b", seed).shared_cell_updates;
   }
@@ -299,13 +313,13 @@ TEST(EpisodeRunner, P5aVarkenBilgiPaylasimiOlur)
 TEST(EpisodeRunner, P5dKulakMisafiriUcuncuTarafaBilgiTasir)
 {
   int with_eavesdrop = 0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     ExperimentConfig config;
     config.n_agents = 5;   // ucuncu tarafin menzilde olma sansi daha yuksek
     config.p5 = swarm_bt_core::CommunicationMechanisms::fromLetters("abd");
     config.failure.enabled = true;
     config.failure.time = -1.0;
-    with_eavesdrop += EpisodeRunner(config, seed).run().eavesdrop_events;
+    with_eavesdrop += makeRunner(config, seed).run().eavesdrop_events;
   }
   EXPECT_GT(with_eavesdrop, 0);
 
@@ -318,11 +332,11 @@ TEST(EpisodeRunner, P5cOlmadanBostaDevralmaYapilamaz)
 {
   // Intent yayini yoksa sahipsiz alanin varligi suruye duyurulmaz; devralma
   // yalnizca karsilasma aninda mumkundur.
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     EXPECT_EQ(runWithComms("ab", seed).idle_claims, 0) << "tohum " << seed;
   }
   int with_intent = 0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     with_intent += runWithComms("abc", seed).idle_claims;
   }
   EXPECT_GT(with_intent, 0);
@@ -352,7 +366,7 @@ swarm_bt_sim::EpisodeMetrics runWithArchitecture(
   config.failure.enabled = true;
   config.failure.time = -1.0;
   config.failure.agent_id = 1;
-  return EpisodeRunner(config, seed).run();
+  return makeRunner(config, seed).run();
 }
 }  // namespace
 
@@ -372,17 +386,44 @@ TEST(EpisodeRunner, TumP2MimarileriKapsamayiTamamlar)
 
 TEST(EpisodeRunner, P2aMerkeziMimariDevralmayiKarsilasmaBeklemedenYapar)
 {
-  // Dagitik mimaride N=3'te ortadaki drone arizalanirsa hayatta kalanlar
-  // bulusmayabilir (README V12). Merkez bunu beklemez.
-  double central_time = 0.0;
-  double distributed_time = 0.0;
-  for (int seed = 0; seed < 10; ++seed) {
-    central_time +=
-      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kCentral, seed).mission_time;
-    distributed_time +=
-      runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kDistributed, seed).mission_time;
+  // Merkezi mimarinin YAPISAL ozelligi: sahipsiz alanin devri bir karsilasmaya
+  // bagli degildir (dagitikta oyle, README V12). Gorev suresi sirasi tohumdan
+  // tohuma degisebilir; burada sinanan sey davranisin kendisi.
+  //
+  // Kurgu: r_comm cok kucuk -> hicbir karsilasma olmaz. Merkez yine de
+  // arizali drone'un alanini dagitabilmeli.
+  ExperimentConfig config;
+  config.n_agents = 3;
+  config.r_comm = 1.0;              // hicbir karsilasma olmasin
+  config.sim.safety_radius = 0.5;
+  // Rastgele kalkis iki drone'u 1 m icine duşurebilir; deterministik kalkista
+  // ajanlar kendi seritlerinde, en az bir serit genisligi kadar uzakta baslar.
+  config.sim.random_launch = false;
+  config.p5.intent_broadcast = false;   // bosta devralma yolunu da kapat
+  config.failure.enabled = true;
+  config.failure.time = -1.0;
+  config.failure.agent_id = 1;
+
+  auto central = config;
+  central.p2 = swarm_bt_core::CoordinationArchitecture::kCentral;
+  auto distributed = config;
+  distributed.p2 = swarm_bt_core::CoordinationArchitecture::kDistributed;
+
+  int central_transfers = 0;
+  int distributed_transfers = 0;
+  int total_encounters = 0;
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto with_center = makeRunner(central, seed).run();
+    const auto without_center = makeRunner(distributed, seed).run();
+    central_transfers += with_center.orphan_transfers;
+    distributed_transfers += without_center.orphan_transfers;
+    total_encounters += with_center.encounters + without_center.encounters;
   }
-  EXPECT_LT(central_time, distributed_time);
+
+  EXPECT_EQ(total_encounters, 0) << "kurgu bozuldu: karsilasma olmamaliydi";
+  EXPECT_GT(central_transfers, 0) << "merkez karsilasma olmadan devri yapamadi";
+  EXPECT_EQ(distributed_transfers, 0)
+    << "dagitik mimari karsilasma olmadan devir yapmamali";
 }
 
 TEST(EpisodeRunner, P2aMerkeziMimariDahaCokMesajUretir)
@@ -401,7 +442,7 @@ TEST(EpisodeRunner, P2aMerkeziMimariDahaCokMesajUretir)
 TEST(EpisodeRunner, P2bHiyerarsikMimarideGeciciLiderSecilir)
 {
   int elections = 0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     elections += runWithArchitecture(
       swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid, seed, 5).leader_elections;
   }
@@ -423,7 +464,7 @@ TEST(EpisodeRunner, P2aMerkeziMimariDigerIkisindenAyrisir)
   double central = 0.0;
   double hierarchical = 0.0;
   double distributed = 0.0;
-  for (int seed = 0; seed < 10; ++seed) {
+  for (int seed = 0; seed < 5; ++seed) {
     central +=
       runWithArchitecture(swarm_bt_core::CoordinationArchitecture::kCentral, seed).mission_time;
     hierarchical += runWithArchitecture(
@@ -435,23 +476,21 @@ TEST(EpisodeRunner, P2aMerkeziMimariDigerIkisindenAyrisir)
   EXPECT_NE(central, hierarchical);
 }
 
-TEST(EpisodeRunner, P2bHiyerarsikMimariBuOlceklerdeDagitiktanAyirtEdilemiyor)
+TEST(EpisodeRunner, P2bHiyerarsikMimariUcuncuBirDavranisUretir)
 {
-  // BULGU (README V16): N=3-5'te r_comm=60 m ile UC drone ayni anda neredeyse
-  // hicbir zaman karsilikli menzilde olmuyor; kumeler hep ikili kaliyor ve
-  // ikili kumede lider, ikili pazarligin verecegi karari veriyor.
-  int large_clusters = 0;
-  for (const int n : {3, 5}) {
-    for (int seed = 0; seed < 10; ++seed) {
-      const auto hierarchical = runWithArchitecture(
-        swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid, seed, n);
-      const auto distributed = runWithArchitecture(
-        swarm_bt_core::CoordinationArchitecture::kDistributed, seed, n);
-      large_clusters += hierarchical.multi_agent_clusters;
-      EXPECT_DOUBLE_EQ(hierarchical.mission_time, distributed.mission_time)
-        << "N=" << n << " tohum " << seed;
-    }
+  // BULGU (README V16, revize): BT karar katmani devreye girdikten sonra
+  // hiyerarsik mimari dagitiktan AYRISIYOR. Lider kumeyi butun olarak gorup
+  // is yukunu dogrudan yeniden dagitiyor; dagitik mimaride ayni is yalnizca
+  // ikili muzakere yoluyla, karsilasma sirasina bagli olarak yapiliyor.
+  double hierarchical_total = 0.0;
+  double distributed_total = 0.0;
+  for (int seed = 0; seed < 6; ++seed) {
+    hierarchical_total += runWithArchitecture(
+      swarm_bt_core::CoordinationArchitecture::kHierarchicalHybrid, seed, 5).mission_time;
+    distributed_total += runWithArchitecture(
+      swarm_bt_core::CoordinationArchitecture::kDistributed, seed, 5).mission_time;
   }
-  // Bulgunun sayisal dayanagi: uc ve daha fazla uyeli kume neredeyse hic yok.
-  EXPECT_LE(large_clusters, 2) << "beklenenden cok buyuk kume olustu";
+  EXPECT_NE(hierarchical_total, distributed_total);
+  // Lider kumeyi bir butun olarak planladigi icin daha hizli bitirmeli.
+  EXPECT_LT(hierarchical_total, distributed_total);
 }

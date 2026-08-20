@@ -35,7 +35,7 @@
             <Inverter>
               <HasPendingEncounter/>
             </Inverter>
-            <SubTree ID="NegotiationSubtree"/>
+            <SubTree ID="NegotiationSubtree" _autoremap="true"/>
           </Fallback>
 
           <!-- Bolum 2.1 adim 3-4: lawn-mower tarama + stigmerji isaretleme. -->

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NEGOTIATION ALT-AGACI  (plan Bolum 2.2)
+  =======================================
+  Karsilasma olayinda calisan, tekrar kullanilabilir alt-agac. Klockner'in
+  modulerlik ilkesi: bu dalin degismesi diger dallari etkilemez, ve ayni
+  alt-agac uc P4 varyantinin (merkezi / dagitik / olay-gudumlu) ucunde de
+  DEGISTIRILMEDEN kullanilir.
+
+  Plandaki yapinin birebir karsiligi:
+
+    Sequence [Negotiation Subtree]
+    |- Action: durum_bilgisi_degis()          -> ExchangeStatus
+    `- Fallback
+       |- Sequence [Dengesizlik varsa -> TAKAS]
+       |  |- Condition: kalan_alan_farki > esik_degeri
+       |  |                                   -> IsAreaImbalanceAboveThreshold
+       |  `- Action: alan_takasi_teklif_et()  -> ProposeAreaSwap
+       |- Sequence [Sinirda ortak ilgi varsa -> BIRLIKTE TARA]
+       |  |- Condition: sinir_bolgesinde_feromon_yuksek()
+       |  |                                   -> IsBoundaryPheromoneHigh
+       |  `- Action: joint_scan_baslat()      -> StartJointScan
+       `- Action: sadece_bilgi_paylas_ve_devam_et()
+                                              -> ShareInfoAndContinue
+
+  Fallback sirasi onemlidir: takas dali reddedilirse (teklif kuruldu ama fayda
+  vermedi) ortak tarama denenir; o da tetiklenmezse bilgi paylasimiyla yola
+  devam edilir. Boylece her karsilasma bir sonuca baglanir.
+
+  Ajan kimligi (agent_id) ve muzakere ortagi (peer_id) blackboard'dan gelir;
+  alt-agac drone SAYISINDAN bagimsizdir ve tek basina birim test edilebilir.
+-->
+<root BTCPP_format="4">
+
+  <BehaviorTree ID="NegotiationSubtree">
+    <Sequence name="negotiation">
+
+      <!-- durum_bilgisi_degis(): kalan_alan_yuzdesi, batarya, oncelik_puani
+           karsilikli paylasilir. Bekleyen karsilasma ortagi burada alinir. -->
+      <ExchangeStatus/>
+
+      <Fallback name="karar">
+
+        <!-- Dengesizlik varsa -> TAKAS -->
+        <Sequence name="takas">
+          <IsAreaImbalanceAboveThreshold/>
+          <ProposeAreaSwap/>
+        </Sequence>
+
+        <!-- Sinirda ortak ilgi varsa -> BIRLIKTE TARA -->
+        <Sequence name="ortak_tarama">
+          <IsBoundaryPheromoneHigh/>
+          <StartJointScan/>
+        </Sequence>
+
+        <!-- Hicbir esik asilmadiysa: stigmerji senkronize edilir, yola devam -->
+        <ShareInfoAndContinue/>
+
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+</root>

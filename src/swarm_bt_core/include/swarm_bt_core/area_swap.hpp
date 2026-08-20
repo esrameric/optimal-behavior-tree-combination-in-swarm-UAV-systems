@@ -103,6 +103,26 @@ public:
   /// \return devralinan hucre sayisi; ajan hala mesgulse ya da havuz bossa 0.
   static int claimOrphansIfIdle(SwarmState * state, int agent_id);
 
+  // --- Ortak tarama (plan Bolum 2.2, ikinci dal) ---
+
+  /// Iki ajanin bolgeleri arasindaki SINIR hucreleri (4-komsuluk).
+  static std::vector<int> boundaryCells(const SwarmState & state, int agent_a, int agent_b);
+
+  /// Sinir bolgesindeki ortalama ilgi feromonu
+  /// (plan: sinir_bolgesinde_feromon_yuksek()).
+  static double boundaryPheromone(const SwarmState & state, int agent_a, int agent_b);
+
+  /// joint_scan_baslat(): sinirdaki taranmamis hucreler HER IKI ajanin da
+  /// bolgesine eklenir; kim once varirsa tarar.
+  ///
+  /// Bu, bolgelerin kesin partisyon olma ozelligini bilincli olarak kirar --
+  /// ortak tarama zaten "birlikte tara" demektir. Stigmerji (P5b) acikken
+  /// ikinci ajan hucreyi atlar; kapaliyken bilemez ve tekrar tarar. P5b'nin
+  /// gorev suresine etkisinin olculebilecegi tek yer burasidir (README V15).
+  ///
+  /// \return ortak taramaya alinan hucre sayisi.
+  static int startJointScan(SwarmState * state, int agent_a, int agent_b);
+
 private:
   double swap_threshold_;
 };

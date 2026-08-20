@@ -28,6 +28,15 @@ struct AgentState
   /// region icinde siradaki hedef hucrenin indeksi.
   std::size_t next_waypoint{0};
 
+  /// BT'nin komut verdigi hedef hucre; -1 ise hedef yok (ajan bekler).
+  ///
+  /// Gorev bolusumu gercek bir sistemdeki gibi: BT "su hucreye git" der,
+  /// ucus katmani (KinematicSim) ucurur. Bu ayrim P4'un davranisa yansimasi
+  /// icin sart -- olay-gudumlu agac (P4c) calisan bir hareketi KESEBILMELI.
+  int target_cell{-1};
+  /// Ucus katmani hedefe varildigini boyle bildirir.
+  bool at_target{false};
+
   /// Bolgenin sutunlarinin hangi yonde tarandigi. Bitisik ajanlara zit yon
   /// verilir (suru duzeyinde serpantin); takas sonrasi bolge yeniden
   /// siralanirken ayni yon korunur.

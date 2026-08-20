@@ -34,44 +34,29 @@ double KinematicSim::speedOf(int agent_id) const
   return config_.speed * speed_factors_[static_cast<std::size_t>(agent_id)];
 }
 
-int KinematicSim::nextTargetCell(AgentState & agent) const
-{
-  while (agent.next_waypoint < agent.region.size()) {
-    const int cell_id = agent.region[agent.next_waypoint];
-    if (!state_->knowsVisited(agent.id, cell_id)) {
-      return cell_id;
-    }
-    // Ajan bu hucrenin tarandigini BILIYOR: atla. Stigmerji (P5b) kapaliysa
-    // baskasinin taradigi hucreyi bilemez ve tekrar tarar.
-    ++agent.next_waypoint;
-  }
-  return -1;
-}
-
 void KinematicSim::moveAgent(AgentState & agent)
 {
-  const int target_cell = nextTargetCell(agent);
-  if (target_cell < 0) {
-    return;
+  if (agent.target_cell < 0 || agent.at_target) {
+    return;   // hedef yok ya da varildi: BT'nin bir sonraki komutu bekleniyor
   }
 
-  const Vec2 target = state_->area().cellCenter(target_cell);
+  const Vec2 target = state_->area().cellCenter(agent.target_cell);
   const Vec2 delta = target - agent.position;
   const double remaining = swarm_bt_core::norm(delta);
   const double step_length = speedOf(agent.id) * config_.dt;
 
   if (remaining <= step_length || remaining <= config_.waypoint_tolerance) {
-    // Hedefe varildi: hucreyi tara, izini birak, siradakine gec.
+    // Hedefe varildi: hucreyi tara ve ucus katmani olarak BT'ye bildir.
     agent.distance_travelled += remaining;
     agent.position = target;
-    state_->markVisitedBy(agent.id, target_cell);
+    state_->markVisitedBy(agent.id, agent.target_cell);
     // Feromon yalnizca ILGI NOKTASI bulunan hucrede birakilir; her taranan
     // hucreye birakilsaydi "sinirda ortak ilgi yuksek" kosulu yalnizca
     // "sinir yakin zamanda tarandi" anlamina gelirdi.
-    if (state_->hasInterestPoint(target_cell)) {
-      state_->interest().deposit(target_cell, config_.interest_deposit);
+    if (state_->hasInterestPoint(agent.target_cell)) {
+      state_->interest().deposit(agent.target_cell, config_.interest_deposit);
     }
-    ++agent.next_waypoint;
+    agent.at_target = true;
     return;
   }
 

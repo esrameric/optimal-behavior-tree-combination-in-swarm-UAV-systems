@@ -43,8 +43,11 @@ class KinematicSim
 public:
   KinematicSim(swarm_bt_core::SwarmState & state, const KinematicSimConfig & config);
 
-  /// Bir tick ilerletir: ajanlari hareket ettirir, varilan hucreleri isaretler,
-  /// feromonu sonumler ve simulasyon saatini ilerletir.
+  /// Bir tick ilerletir: ajanlari HEDEFLERINE dogru hareket ettirir, varilan
+  /// hucreleri isaretler, feromonu sonumler ve simulasyon saatini ilerletir.
+  ///
+  /// Hedefi kim secer: BT (ScanNextCell dugumu). Bu sinif yalnizca ucus
+  /// katmanidir; hedefi olmayan ajan yerinde bekler.
   void step();
 
   /// Kapsama tamamlandi veya zaman siniri asildi.
@@ -54,9 +57,6 @@ public:
   const KinematicSimConfig & config() const {return config_;}
 
 private:
-  /// Ajanin siradaki hedefini dondurur; kalan hedef yoksa -1.
-  /// Baskasinin tarayip isaretledigi hucreler atlanir (stigmerji kazanci).
-  int nextTargetCell(swarm_bt_core::AgentState & agent) const;
   void moveAgent(swarm_bt_core::AgentState & agent);
 
   /// Ajanin efektif hizi [m/s] (nominal hiz x tohumlanmis sapma carpani).

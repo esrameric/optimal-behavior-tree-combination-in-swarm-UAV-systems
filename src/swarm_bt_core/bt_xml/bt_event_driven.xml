@@ -31,7 +31,7 @@
         <!-- Oncelik 1 - Bolum 2.1 adim 5: comm-range girisi. -->
         <Sequence name="olay_karsilasma">
           <HasPendingEncounter/>
-          <SubTree ID="NegotiationSubtree"/>
+          <SubTree ID="NegotiationSubtree" _autoremap="true"/>
         </Sequence>
 
         <!-- Oncelik 2 - Bolum 2.2: sinirda ortak ilgi, karsilasma olmadan da

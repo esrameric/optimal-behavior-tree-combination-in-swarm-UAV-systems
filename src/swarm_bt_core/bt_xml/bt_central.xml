@@ -30,7 +30,7 @@
         <Inverter>
           <HasPendingEncounter/>
         </Inverter>
-        <SubTree ID="NegotiationSubtree"/>
+        <SubTree ID="NegotiationSubtree" _autoremap="true"/>
       </Fallback>
 
       <!-- P2a: hedefler merkezden dagitilir; ajanlar yalnizca yurutur. -->

@@ -2,6 +2,7 @@
 #define SWARM_BT_SIM__EPISODE_RUNNER_HPP_
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -11,6 +12,7 @@
 #include <swarm_bt_core/failure_injector.hpp>
 #include <swarm_bt_core/swarm_state.hpp>
 
+#include "swarm_bt_sim/bt_swarm_controller.hpp"
 #include "swarm_bt_sim/kinematic_sim.hpp"
 
 namespace swarm_bt_sim
@@ -57,6 +59,10 @@ struct EpisodeMetrics
   int eavesdrop_events{0};
   /// P2b'de kac kez gecici lider secildi (kume boyutu >= 2).
   int leader_elections{0};
+  /// BT'de calisan ortak tarama (joint_scan) sayisi.
+  int joint_scans{0};
+  /// BT'de calisan durum bilgisi degisimi (durum_bilgisi_degis) sayisi.
+  int status_exchanges{0};
   /// P2b'de olusan UC VE DAHA FAZLA uyeli kume sayisi. Hiyerarsik mimarinin
   /// dagitiktan ayristigi tek durum budur: ikili kumede lider, ikili
   /// pazarligin verecegi karari verir.
@@ -91,7 +97,11 @@ struct EpisodeMetrics
 class EpisodeRunner
 {
 public:
-  EpisodeRunner(const swarm_bt_core::ExperimentConfig & config, int seed);
+  /// \param bt_xml_dir BT XML dizini; bos birakilirsa kurulu paketten bulunur.
+  explicit EpisodeRunner(
+    const swarm_bt_core::ExperimentConfig & config, int seed,
+    const std::string & bt_xml_dir = "");
+  ~EpisodeRunner();
 
   /// Koşuyu bitene kadar calistirir ve metrikleri dondurur.
   EpisodeMetrics run();
@@ -100,10 +110,6 @@ public:
   const swarm_bt_core::ExperimentConfig & config() const {return config_;}
 
 private:
-  /// Bir karsilasmayi isler: once arizadan kalan sahipsiz alan paylasilir,
-  /// sonra dengesizlik esigi asilmissa takas degerlendirilir.
-  void handleEncounter(int agent_a, int agent_b);
-
   /// P6 tetikleme modeline gore, bu tick'te hangi ciftlerin islenecegini belirler.
   void triggerCoordination();
 
@@ -123,10 +129,10 @@ private:
   /// kumeye gecici bir lider secilir ve karar lider araciligiyla verilir.
   void runHierarchicalCoordination(const std::vector<std::pair<int, int>> & pairs);
 
-  /// Iki ajan arasinda tek bir dengeleme adimi (devralma + takas degerlendirmesi).
-  /// P2'nin uc secenegi de sonunda bunu cagirir; degisen yalnizca hangi ciftlerin
-  /// secildigi ve bunun icin ne kadar iletisim gerektigidir.
-  bool rebalancePair(int agent_a, int agent_b);
+  /// Bir cifti BT'nin muzakere kuyruguna yazar. P2'nin uc secenegi de sonunda
+  /// bunu cagirir; degisen yalnizca hangi ciftlerin secildigi ve bunun icin ne
+  /// kadar iletisim gerektigidir. Kararin KENDISI BT'de verilir.
+  void queuePair(int agent_a, int agent_b);
 
   /// Canli ajanlar arasindan kalan alani en fazla ve en az olan cifti bulur.
   std::pair<int, int> mostImbalancedPair(const std::vector<int> & agent_ids) const;
@@ -142,6 +148,7 @@ private:
   swarm_bt_core::AreaSwapNegotiator negotiator_;
   swarm_bt_core::FailureInjector failure_injector_;
   std::unique_ptr<KinematicSim> sim_;
+  std::unique_ptr<BtSwarmController> controller_;
   EpisodeMetrics metrics_;
 };
 

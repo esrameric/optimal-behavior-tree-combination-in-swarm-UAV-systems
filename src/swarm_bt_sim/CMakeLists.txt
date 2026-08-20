@@ -13,17 +13,19 @@ endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/btcpp_prefix_fix.cmake" OPTIONAL)
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(swarm_bt_core REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/kinematic_sim.cpp
+  src/bt_swarm_controller.cpp
   src/episode_runner.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>"
 )
-ament_target_dependencies(${PROJECT_NAME} swarm_bt_core)
+ament_target_dependencies(${PROJECT_NAME} swarm_bt_core ament_index_cpp)
 
 add_executable(sim_runner src/sim_main.cpp)
 target_link_libraries(sim_runner ${PROJECT_NAME})
@@ -49,7 +51,7 @@ install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep
 
 ament_export_include_directories(include)
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies(swarm_bt_core)
+ament_export_dependencies(swarm_bt_core ament_index_cpp)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -58,8 +60,14 @@ if(BUILD_TESTING)
 
   find_package(ament_cmake_gtest REQUIRED)
   foreach(_test test_kinematic_sim test_episode_runner)
-    ament_add_gtest(${_test} test/${_test}.cpp)
+    # Uctan uca koşu testleri tam simulasyon calistiriyor; varsayilan 60 s
+    # zaman asimi yetmiyor.
+    ament_add_gtest(${_test} test/${_test}.cpp TIMEOUT 600)
     target_link_libraries(${_test} ${PROJECT_NAME})
+    # Testler ament index'e (AMENT_PREFIX_PATH) bagimli olmasin: BT XML dizini
+    # dogrudan kaynak agacindan verilir.
+    target_compile_definitions(${_test} PRIVATE
+      SWARM_BT_XML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../swarm_bt_core/bt_xml")
   endforeach()
 endif()
 

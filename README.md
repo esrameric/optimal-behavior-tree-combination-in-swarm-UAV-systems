@@ -236,7 +236,7 @@ Görev süresine etkisinin görüneceği yer Bölüm 2.2'nin **ortak tarama**
 tarar, ve orada stigmerji mükerrerliği önler. O dal negotiation alt-ağacıyla
 (Bölüm 5/Faz 0) birlikte geliyor; P5b'nin süre etkisi orada yeniden ölçülecek.
 
-### V16 — Hiyerarşik hibrit (P2b), N=3-5 ölçeğinde tam dağıtıktan ayırt edilemiyor
+### V16 — Hiyerarşik hibrit (P2b) — **revize edildi, aşağıya bakınız**
 P2b'nin P2c'den farkı, bir kümenin **bütün olarak** planlanmasıdır: lider,
 kümedeki tüm üyeleri görüp ardışık dengeleme adımları uygular. İkili bir kümede
 lider, ikili pazarlığın vereceği kararı verir — fark ancak **üç ve daha fazla**
@@ -250,3 +250,40 @@ belgeliyor). P2a (tam merkezi) ise ikisinden de ayrışıyor.
 Bu, araştırma sorusu 2 için doğrudan bir bulgu: hiyerarşik koordinasyonun
 ayrışması için sürünün, aynı anda üç ajanı bir arada tutacak kadar **yoğun**
 olması gerekiyor. N=3→N=5 bu eşiği geçmiyor.
+
+### V16-revize — Hiyerarşik hibrit, BT karar katmanı gelince ayrıştı
+V16'daki "P2b ≡ P2c" bulgusu, karar mekanizmasının doğrudan mekanizma
+çağrılarıyla yürütüldüğü döneme aitti ve **artık geçerli değil**. BT karar
+katmanı devreye girdikten sonra üç mimari de ayrışıyor (arızalı senaryo,
+10 tohum ortalaması):
+
+| P2 | N=3 | N=5 |
+|---|---|---|
+| a — tam merkezi | 464.9 s | 300.4 s |
+| **b — hiyerarşik hibrit** | **461.0 s** | **294.3 s** |
+| c — tam dağıtık | 468.7 s | 302.4 s |
+
+Farkın kaynağı, üç üyeli küme sayısı değil (o hâlâ nadir): **liderin işi
+doğrudan yeniden dağıtabilmesi**. Dağıtık mimaride aynı iş yalnızca ikili
+müzakere yoluyla, karşılaşma sırasına bağlı olarak yapılıyor. P2b her iki
+ölçekte de en hızlısı.
+
+### V17 — BT karar katmanı ile uçuş katmanı ayrıldı
+`ScanNextCell` düğümü hedefi seçer ve varılana kadar `RUNNING` döner;
+`KinematicSim` yalnızca uçurur. Bu ayrım P4'ün davranışa yansıması için şart:
+olay-güdümlü ağaç (P4c) çalışan bir taramayı ancak `RUNNING` bir düğümü halt
+ederek kesebilir. Aynı ayrım Faz 2'de Gazebo'nun uçuş katmanı yerine geçmesini
+de mümkün kılar (plan Bölüm 7).
+
+**Bu refaktör iki gerçek hata ortaya çıkardı:**
+
+1. *Boşa giden tick:* hücreye varınca hedef temizleniyor, yeni hedef bir sonraki
+   tick'te seçiliyordu — her hücre için bir tick boşa gidiyor, görev süresi
+   yaklaşık iki katına çıkıyordu. Sıradaki hedef artık **aynı tick'te** seçiliyor.
+
+2. *Erişilemez hücre (kilitlenme):* sıradaki taranmamış hücre yalnızca
+   `next_waypoint`'ten **ileri** aranıyordu. Bölge; takas, sahipsiz alan
+   devralma ve ortak tarama sonrası **uçuş sırasında yeniden sıralanıyor** ve
+   mevcut tarama konumundan önceye hücre düşebiliyor. Ölçülen sonuç: bir koşuda
+   tam olarak 1 hücre erişilemez kalıyor, kapsama hiçbir zaman tamamlanmıyor ve
+   koşu 3000 s zaman sınırına dayanıyordu. Arama artık **sarmalanıyor**.

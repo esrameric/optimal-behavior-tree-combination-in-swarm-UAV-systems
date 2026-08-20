@@ -31,6 +31,8 @@ add_library(${PROJECT_NAME} SHARED
   src/failure_injector.cpp
   src/parameter_space.cpp
   src/region_allocator.cpp
+  src/bt_context.cpp
+  src/bt_nodes.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -80,12 +82,15 @@ if(BUILD_TESTING)
       test_failure_injector
       test_parameter_space
       test_region_allocator
-      test_interest_points)
+      test_interest_points
+      test_negotiation_subtree)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()
-  target_compile_definitions(test_bt_xml_variants PRIVATE
-    SWARM_BT_XML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/bt_xml")
+  foreach(_xml_test test_bt_xml_variants test_negotiation_subtree)
+    target_compile_definitions(${_xml_test} PRIVATE
+      SWARM_BT_XML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/bt_xml")
+  endforeach()
 endif()
 
 ament_package()

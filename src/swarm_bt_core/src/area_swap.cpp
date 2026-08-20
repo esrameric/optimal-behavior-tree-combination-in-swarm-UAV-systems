@@ -204,6 +204,74 @@ int AreaSwapNegotiator::claimOrphansIfIdle(SwarmState * state, int agent_id)
   return static_cast<int>(claimable.size());
 }
 
+std::vector<int> AreaSwapNegotiator::boundaryCells(
+  const SwarmState & state, int agent_a, int agent_b)
+{
+  const auto & area = state.area();
+  const auto & region_b = state.agent(agent_b).region;
+  const std::unordered_set<int> cells_b(region_b.begin(), region_b.end());
+
+  std::unordered_set<int> boundary;
+  for (const int cell_id : state.agent(agent_a).region) {
+    const int col = area.colOf(cell_id);
+    const int row = area.rowOf(cell_id);
+    const int neighbours[4][2] = {{col - 1, row}, {col + 1, row}, {col, row - 1}, {col, row + 1}};
+    for (const auto & neighbour : neighbours) {
+      if (neighbour[0] < 0 || neighbour[0] >= area.cols() ||
+        neighbour[1] < 0 || neighbour[1] >= area.rows())
+      {
+        continue;
+      }
+      const int neighbour_id = area.cellId(neighbour[0], neighbour[1]);
+      if (cells_b.count(neighbour_id) > 0) {
+        boundary.insert(cell_id);
+        boundary.insert(neighbour_id);
+      }
+    }
+  }
+
+  std::vector<int> result(boundary.begin(), boundary.end());
+  std::sort(result.begin(), result.end());
+  return result;
+}
+
+double AreaSwapNegotiator::boundaryPheromone(
+  const SwarmState & state, int agent_a, int agent_b)
+{
+  return state.interest().meanOver(boundaryCells(state, agent_a, agent_b));
+}
+
+int AreaSwapNegotiator::startJointScan(SwarmState * state, int agent_a, int agent_b)
+{
+  if (state == nullptr) {
+    throw std::invalid_argument("AreaSwapNegotiator::startJointScan: durum bos olamaz");
+  }
+
+  std::vector<int> shared;
+  for (const int cell_id : boundaryCells(*state, agent_a, agent_b)) {
+    if (!state->isVisited(cell_id)) {
+      shared.push_back(cell_id);
+    }
+  }
+  if (shared.empty()) {
+    return 0;
+  }
+
+  int added = 0;
+  for (const int agent_id : {agent_a, agent_b}) {
+    auto & region = state->agent(agent_id).region;
+    const std::unordered_set<int> owned(region.begin(), region.end());
+    for (const int cell_id : shared) {
+      if (owned.count(cell_id) == 0) {
+        region.push_back(cell_id);
+        ++added;
+      }
+    }
+    state->resequenceRegion(agent_id);
+  }
+  return added;
+}
+
 void AreaSwapNegotiator::apply(SwarmState * state, const SwapProposal & proposal) const
 {
   if (state == nullptr) {
