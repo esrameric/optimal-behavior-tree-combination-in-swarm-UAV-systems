@@ -174,3 +174,21 @@ kapatabilecek ajana geçer.
 
 Teklif edilen hücreler, teklif edenin kalan hücrelerinden **alıcıya en yakın**
 olanlardır ve sayıları ikiliyi dengeleyecek kadardır (farkın yarısı).
+
+### V12 — Dağıtık devralma tek başına kilitleniyor, boşta kalan ajan gerekiyor
+Plan Bölüm 2.3 arızalanan drone'un alanının "nasıl devralındığını" gözlemlemeyi
+istiyor. Devralmayı yalnızca karşılaşma anına bağlamak **çalışmıyor**: N=3'te
+ortadaki drone arızalanırsa hayatta kalan iki ajan ~140 m arayla kalır ve
+`r_comm = 60 m` ile birbirlerini **hiç görmezler** — sahipsiz alan sonsuza kadar
+sahipsiz kalır, görev zaman sınırına dayanır.
+
+Eklenen ikinci yol: kendi bölgesini bitirip **boşta kalan** ajan, stigmerji
+haritasındaki taranmamış hücreleri görüp üstlenir (`claimOrphansIfIdle`).
+Merkezi bir dağıtıcı gerektirmez, dolayısıyla tam dağıtık mimariyle (P2c)
+uyumludur. Ölçülen: arıza t=132 s'de, 73 hücre devralınıyor, görev 278 s yerine
+417 s'de tamamlanıyor.
+
+Devralma **sonrası** oluşan büyük iş yükü dengesizliği (ajan 2: 4181 m, ajan 0:
+2780 m) takas müzakeresiyle düzeltilemiyor, çünkü iki ajan yine buluşmuyor.
+Bu, P2 (koordinasyon mimarisi) karşılaştırmasının ölçmesi beklenen etkilerden
+biri: merkezi/hiyerarşik mimarilerde bu bilgi buluşma gerektirmeden akar.

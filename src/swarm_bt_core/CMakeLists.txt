@@ -28,6 +28,7 @@ add_library(${PROJECT_NAME} SHARED
   src/experiment_config.cpp
   src/bt_node_manifest.cpp
   src/area_swap.cpp
+  src/failure_injector.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -73,7 +74,8 @@ if(BUILD_TESTING)
       test_experiment_config
       test_bt_xml_variants
       test_mission_area_invariant
-      test_area_swap)
+      test_area_swap
+      test_failure_injector)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()

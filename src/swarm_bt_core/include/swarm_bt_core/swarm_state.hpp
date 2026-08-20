@@ -90,7 +90,18 @@ public:
   /// Ajanin bolgesinde taranmamis hucre orani [0,1]; bolge bossa 0.
   double remainingRatio(int agent_id) const;
 
-  /// Tum ajanlarin bolgelerindeki taranmamis hucreler bittiginde true.
+  /// Arizalanan drone'dan devrolan, henuz kimseye atanmamis hucreler
+  /// (plan Bolum 2.3: "kalan alaninin nasil devralindigini gozlemle").
+  const std::vector<int> & orphanedCells() const {return orphaned_cells_;}
+
+  /// Ajani arizalandirir: canli bayragi duşer, bolgesindeki TARANMAMIS hucreler
+  /// sahipsiz havuza tasinir. Taranmis hucreler kimseye lazim degil, atilir.
+  void failAgent(int agent_id);
+
+  /// Canli bir ajanin sahipsiz hucrelerden bir kismini devralmasi.
+  void claimOrphanedCells(int agent_id, const std::vector<int> & cells);
+
+  /// Tum ajanlarin bolgeleri VE sahipsiz havuz tarandiginda true.
   bool coverageComplete() const;
 
   /// Bolum 6 metrigi (kapsama dengesizligi): ajanlar arasi "kalan alan"
@@ -106,6 +117,7 @@ private:
   std::vector<AgentState> agents_;
   PheromoneGrid visited_;
   PheromoneGrid interest_;
+  std::vector<int> orphaned_cells_;
   double time_{0.0};
 };
 

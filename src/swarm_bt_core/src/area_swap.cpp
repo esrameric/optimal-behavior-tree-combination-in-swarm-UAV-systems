@@ -134,6 +134,76 @@ std::optional<SwapProposal> AreaSwapNegotiator::buildProposal(
   return proposal;
 }
 
+int AreaSwapNegotiator::distributeOrphans(SwarmState * state, int agent_a, int agent_b)
+{
+  if (state == nullptr) {
+    throw std::invalid_argument("AreaSwapNegotiator::distributeOrphans: durum bos olamaz");
+  }
+  const auto orphans = state->orphanedCells();
+  if (orphans.empty()) {
+    return 0;
+  }
+
+  const bool a_alive = state->agent(agent_a).alive;
+  const bool b_alive = state->agent(agent_b).alive;
+  if (!a_alive && !b_alive) {
+    return 0;
+  }
+
+  std::vector<int> for_a;
+  std::vector<int> for_b;
+  const Vec2 position_a = state->agent(agent_a).position;
+  const Vec2 position_b = state->agent(agent_b).position;
+
+  for (const int cell_id : orphans) {
+    if (state->isVisited(cell_id)) {
+      continue;
+    }
+    if (!b_alive) {
+      for_a.push_back(cell_id);
+      continue;
+    }
+    if (!a_alive) {
+      for_b.push_back(cell_id);
+      continue;
+    }
+    const Vec2 center = state->area().cellCenter(cell_id);
+    if (distance(position_a, center) <= distance(position_b, center)) {
+      for_a.push_back(cell_id);
+    } else {
+      for_b.push_back(cell_id);
+    }
+  }
+
+  state->claimOrphanedCells(agent_a, for_a);
+  state->claimOrphanedCells(agent_b, for_b);
+  return static_cast<int>(for_a.size() + for_b.size());
+}
+
+int AreaSwapNegotiator::claimOrphansIfIdle(SwarmState * state, int agent_id)
+{
+  if (state == nullptr) {
+    throw std::invalid_argument("AreaSwapNegotiator::claimOrphansIfIdle: durum bos olamaz");
+  }
+  const auto & agent = state->agent(agent_id);
+  if (!agent.alive || state->orphanedCells().empty() || state->remainingCells(agent_id) > 0) {
+    return 0;
+  }
+
+  std::vector<int> claimable;
+  for (const int cell_id : state->orphanedCells()) {
+    if (!state->isVisited(cell_id)) {
+      claimable.push_back(cell_id);
+    }
+  }
+  if (claimable.empty()) {
+    return 0;
+  }
+
+  state->claimOrphanedCells(agent_id, claimable);
+  return static_cast<int>(claimable.size());
+}
+
 void AreaSwapNegotiator::apply(SwarmState * state, const SwapProposal & proposal) const
 {
   if (state == nullptr) {

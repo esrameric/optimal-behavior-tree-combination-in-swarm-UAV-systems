@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <stdexcept>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace swarm_bt_core
@@ -87,8 +89,61 @@ double SwarmState::remainingRatio(int agent_id) const
   return static_cast<double>(remainingCells(agent_id)) / static_cast<double>(region.size());
 }
 
+void SwarmState::failAgent(int agent_id)
+{
+  auto & a = agent(agent_id);
+  if (!a.alive) {
+    return;
+  }
+  a.alive = false;
+
+  // Taranmamis hucreler sahipsiz havuza; taranmis olanlar zaten kapatildi.
+  for (const int cell_id : a.region) {
+    if (!isVisited(cell_id)) {
+      orphaned_cells_.push_back(cell_id);
+    }
+  }
+  a.region.clear();
+  a.next_waypoint = 0;
+  ++a.assignment_changes;
+}
+
+void SwarmState::claimOrphanedCells(int agent_id, const std::vector<int> & cells)
+{
+  if (cells.empty()) {
+    return;
+  }
+  auto & a = agent(agent_id);
+  if (!a.alive) {
+    throw std::invalid_argument("SwarmState::claimOrphanedCells: arizali ajan devralamaz");
+  }
+
+  const std::unordered_set<int> claimed(cells.begin(), cells.end());
+  std::vector<int> remaining_orphans;
+  int transferred = 0;
+  for (const int cell_id : orphaned_cells_) {
+    if (claimed.count(cell_id) > 0) {
+      a.region.push_back(cell_id);
+      ++transferred;
+    } else {
+      remaining_orphans.push_back(cell_id);
+    }
+  }
+  orphaned_cells_ = std::move(remaining_orphans);
+
+  if (transferred > 0) {
+    resequenceRegion(agent_id);
+    ++a.assignment_changes;
+  }
+}
+
 bool SwarmState::coverageComplete() const
 {
+  for (const int cell_id : orphaned_cells_) {
+    if (!isVisited(cell_id)) {
+      return false;
+    }
+  }
   for (const auto & a : agents_) {
     for (const int cell_id : a.region) {
       if (!isVisited(cell_id)) {

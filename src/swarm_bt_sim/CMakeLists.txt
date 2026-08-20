@@ -17,6 +17,7 @@ find_package(swarm_bt_core REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/kinematic_sim.cpp
+  src/episode_runner.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -30,6 +31,9 @@ target_link_libraries(sim_runner ${PROJECT_NAME})
 add_executable(calibrate_rcomm src/calibrate_rcomm_main.cpp)
 target_link_libraries(calibrate_rcomm ${PROJECT_NAME})
 
+add_executable(calibrate_threshold src/calibrate_threshold_main.cpp)
+target_link_libraries(calibrate_threshold ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
@@ -37,7 +41,8 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(TARGETS sim_runner calibrate_rcomm DESTINATION lib/${PROJECT_NAME})
+install(TARGETS sim_runner calibrate_rcomm calibrate_threshold
+  DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
@@ -49,8 +54,10 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(test_kinematic_sim test/test_kinematic_sim.cpp)
-  target_link_libraries(test_kinematic_sim ${PROJECT_NAME})
+  foreach(_test test_kinematic_sim test_episode_runner)
+    ament_add_gtest(${_test} test/${_test}.cpp)
+    target_link_libraries(${_test} ${PROJECT_NAME})
+  endforeach()
 endif()
 
 ament_package()

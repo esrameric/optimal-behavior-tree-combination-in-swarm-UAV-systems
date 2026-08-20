@@ -79,6 +79,30 @@ public:
   /// planlanir ve atama degisiklik sayaclari artirilir (Bolum 6 metrigi).
   void apply(SwarmState * state, const SwapProposal & proposal) const;
 
+  /// Arizalanan drone'dan kalan sahipsiz hucreleri, karsilasan iki canli ajan
+  /// arasinda paylastirir (plan Bolum 2.3: "kalan alaninin nasil devralindigi").
+  ///
+  /// Her hucre, o an konumu itibariyle kendisine daha YAKIN olan ajana verilir.
+  /// Devralma yalnizca karsilasma aninda olur; merkezi bir dagitici yoktur --
+  /// dagitik mimaride (P2c) devralmanin dogal hali budur. Ajanlardan biri
+  /// arizaliysa tum hucreleri digeri devralir.
+  ///
+  /// \return devredilen hucre sayisi.
+  static int distributeOrphans(SwarmState * state, int agent_a, int agent_b);
+
+  /// Kendi bolgesini bitirmis (boşta kalan) canli bir ajanin sahipsiz alani
+  /// ustlenmesi.
+  ///
+  /// Yalnizca karsilasmaya dayali devralma yetmiyor: N=3'te ortadaki drone
+  /// arizalanirsa hayatta kalan iki ajan ~140 m arayla kalir ve r_comm=60 m ile
+  /// HIC bulusmaz -- sahipsiz alan sonsuza kadar sahipsiz kalir, gorev zaman
+  /// sinirina dayanir. Bosta kalan ajanin, stigmerji haritasindaki taranmamis
+  /// hucreleri gorup ustlenmesi bu kilidi acar ve dagitik mimaride (P2c) merkezi
+  /// bir dagitici gerektirmeden calisir.
+  ///
+  /// \return devralinan hucre sayisi; ajan hala mesgulse ya da havuz bossa 0.
+  static int claimOrphansIfIdle(SwarmState * state, int agent_id);
+
 private:
   double swap_threshold_;
 };
