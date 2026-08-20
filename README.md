@@ -157,3 +157,20 @@ export CMAKE_PREFIX_PATH="<repo>/.btcpp_overlay:$CMAKE_PREFIX_PATH"
 
 Workspace içinde çalışırken bu gerekmez (her paket `cmake/btcpp_prefix_fix.cmake`
 üzerinden kendisi hallediyor).
+
+### V11 — Takas kabul ölçütünün iyi tanımlı hali
+Plan: *"teklif alan taraf, takas sonrası toplam kat edeceği mesafenin azalıp
+azalmadığına bakar"*. Hücreleri **devralan** taraf her zaman iş üstlenir,
+dolayısıyla kendi kat edeceği mesafe tek başına asla azalmaz — ölçüt bu haliyle
+hiçbir takası kabul etmezdi.
+
+İyi tanımlı hali: alıcı, hücreleri üstlenmenin kendi turuna ekleyeceği mesafeyi
+(`receiver_cost`), teklif edenin bu hücrelerden kurtularak kazanacağı mesafeyle
+(`proposer_gain`) karşılaştırır ve **`receiver_cost < proposer_gain`** ise kabul
+eder — yani takas **ikilinin toplam** kat edeceği mesafeyi azaltıyorsa. Bu,
+"toplam mesafe azalıyor mu" okumasına sadıktır, iyi tanımlıdır ve takasın
+geometrik olarak anlamlı olmasını sağlar: hücreler ancak onları daha ucuza
+kapatabilecek ajana geçer.
+
+Teklif edilen hücreler, teklif edenin kalan hücrelerinden **alıcıya en yakın**
+olanlardır ve sayıları ikiliyi dengeleyecek kadardır (farkın yarısı).

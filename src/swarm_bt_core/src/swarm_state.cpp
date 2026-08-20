@@ -58,6 +58,26 @@ int SwarmState::remainingCells(int agent_id) const
   return remaining;
 }
 
+std::vector<int> SwarmState::remainingCellIds(int agent_id) const
+{
+  std::vector<int> remaining;
+  for (const int cell_id : agent(agent_id).region) {
+    if (!isVisited(cell_id)) {
+      remaining.push_back(cell_id);
+    }
+  }
+  return remaining;
+}
+
+void SwarmState::resequenceRegion(int agent_id)
+{
+  auto & a = agent(agent_id);
+  a.region = area_.boustrophedonOrder(a.region, a.sweep_reversed);
+  // Ziyaret edilmis hucreler nextTargetCell() tarafindan atlandigi icin
+  // basa donmek guvenli ve yeniden planlamanin dogru davranisi.
+  a.next_waypoint = 0;
+}
+
 double SwarmState::remainingRatio(int agent_id) const
 {
   const auto & region = agent(agent_id).region;
@@ -127,6 +147,7 @@ void SwarmState::assignEqualStrips()
     // Ayni yonde taransalardi tum ajanlar sabit sutun farkiyla kilitli ilerler
     // ve BIRBIRLERINE HIC YAKLASMAZDI -> hic karsilasma olayi dogmazdi.
     const bool reverse_columns = (i % 2) == 1;
+    agents_[static_cast<std::size_t>(i)].sweep_reversed = reverse_columns;
     agents_[static_cast<std::size_t>(i)].region =
       area_.boustrophedonOrder(std::move(cells), reverse_columns);
   }

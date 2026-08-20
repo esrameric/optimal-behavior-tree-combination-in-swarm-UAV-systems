@@ -27,6 +27,11 @@ struct AgentState
   /// region icinde siradaki hedef hucrenin indeksi.
   std::size_t next_waypoint{0};
 
+  /// Bolgenin sutunlarinin hangi yonde tarandigi. Bitisik ajanlara zit yon
+  /// verilir (suru duzeyinde serpantin); takas sonrasi bolge yeniden
+  /// siralanirken ayni yon korunur.
+  bool sweep_reversed{false};
+
   /// Bolum 6 metrigi (atama kararliligi): atanmis alanin kac kez degistigi.
   int assignment_changes{0};
 
@@ -75,6 +80,13 @@ public:
 
   /// Ajanin bolgesinde henuz taranmamis hucre sayisi.
   int remainingCells(int agent_id) const;
+
+  /// Ajanin bolgesindeki taranmamis hucreler.
+  std::vector<int> remainingCellIds(int agent_id) const;
+
+  /// Ajanin bolgesini kendi supurme yonuyle yeniden siralar ve siradaki
+  /// waypoint'i basa alir. Takas sonrasi rota yeniden planlamasi icin.
+  void resequenceRegion(int agent_id);
   /// Ajanin bolgesinde taranmamis hucre orani [0,1]; bolge bossa 0.
   double remainingRatio(int agent_id) const;
 
