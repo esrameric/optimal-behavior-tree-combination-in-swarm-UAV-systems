@@ -49,6 +49,27 @@ Yani "manipülasyona açıklık" sorusunun cevabı bu ölçek aralığında şud
 **N=3'te dinamik yeniden-atama pratikte yok; N=5'te var.** Atama kararlılığı da
 buna paralel: N=3→N=5 arası ortalama %26 değişiyor (baseline).
 
+### 4. Intent yayını (P5c) olmadan görev tamamlanamıyor
+
+Metrik tablosunda en büyük fark burada: intent yayını kapalı iki kombinasyon
+(`P5a`, `P5ab`) diğerlerinin **5 katı** sürüyor ve çoğu koşuda hiç bitmiyor.
+
+| kombinasyon | N | görev süresi | devralınan hücre | kapsama tamamlanma oranı |
+|---|---|---|---|---|
+| `P5abc` (baseline) | 3 | 468.7 s | 69.9 | **1.00** |
+| `P5a` / `P5ab` (intent yok) | 3 | 2495.8 s | 14.7 | **0.20** |
+| `P5abc` (baseline) | 5 | 295.8 s | 39.7 | **1.00** |
+| `P5a` / `P5ab` (intent yok) | 5 | 1657.3 s | 19.5 | **0.50** |
+
+Sebep: intent yayını olmadan boşta kalan ajan sahipsiz alanın varlığını
+öğrenemiyor; devralma yalnızca karşılaşma anında mümkün oluyor ve karşılaşma
+gerçekleşmezse arızalanan drone'un alanı **hiç taranmıyor** (README V12).
+
+**Ölçek yönü ters:** intent yayını N=3'te daha kritik (%20 → %100), N=5'te daha
+az (%50 → %100). Daha kalabalık sürüde buluşma şansı arttığı için, yayına
+duyulan ihtiyaç azalıyor. Bu, "hangi parametrenin N-duyarlılığı yüksek"
+sorusuna P5c açısından net bir cevap.
+
 ## Eksen sıralaması
 
 | eksen | ölçülen | yön çatışması | ölçek eşiği | hiç etkisiz |
