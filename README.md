@@ -69,6 +69,47 @@ Altyapının hangi parçasının hazır olduğunu görmek için:
 > (`install/<paket>/share/.../package.sh bulunamadı` hatası). Çözüm:
 > `rm -rf build install log && colcon build --symlink-install`.
 
+## Proje Durumu
+
+Planın (`yapilacaklar_homojen.md`) tüm bölümleri tamamlandı.
+
+**Sonuçlar:** [`SONUCLAR.md`](SONUCLAR.md) — iki araştırma sorusunun cevabı, veriye dayalı.
+**Ölçüm kayıtları:** [`experiments/`](experiments/) — [dizin](experiments/README.md).
+
+| bölüm | durum | ana çıktı |
+|---|---|---|
+| 0 — Altyapı | ✅ | 5 ROS2 paketi, BT.CPP, colcon+GTest, 3 P4 XML varyantı, YAML şablonu |
+| 1 — Sürü kompozisyonu | ✅ | `r_comm = 60 m` kalibre, alan N'den bağımsız sabit |
+| 2 — Görev senaryosu | ✅ | takas mekanizması, `esik_degeri`, arıza enjeksiyonu + devralma |
+| 3 — Parametre uzayı | ✅ | N ∈ {3,5}, deney kimliği şeması (iki yönlü) |
+| 4 — Huni stratejisi | ✅ | baseline + P2/P3/P5/P6 davranışları + OFAT taraması |
+| 5 — Faz planı | ✅ | Faz 0-4: BT entegrasyonu, 320 koşu, Gazebo doğrulaması, analiz |
+| 6 — Metrikler | ✅ | rosbag2 olay loglama, metrikler kayıttan geri hesaplanabiliyor |
+| 7 — Teknik altyapı | ✅ | alt-ağaç modülerliği kanıtlandı, bağımsız tespit node'u |
+| 8 — Deney veritabanı | ✅ | ortak şema, 52 satır, heterojen çalışma için hazır |
+| 9 — Riskler | ✅ | confound kontrol deneyi, eşik hassasiyeti, orantılı alan, N=7/N=10 |
+| 10 — Sonraki adım | ✅ | kalibre parametre referansı (kayma korumalı), kapanış testleri |
+
+**Test durumu:** 615 test / 0 hata / 0 başarısızlık (GTest + pytest + ament lint).
+
+```bash
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install && colcon test && colcon test-result --all
+```
+
+### Öne çıkan bulgular
+
+1. **Merkezi koordinasyon ölçekle bozuluyor** — N=3'te dağıtıktan iyi (−3.86 s),
+   N=5'te kötü (+12.74 s). Gazebo'da da doğrulandı.
+2. **Sürü ölçekle daha kararlı, ama daha verimsiz** — ajan başına atama
+   değişikliği 16/16 kombinasyonda azalıyor; iş yükü sabitken drone eklemek
+   N=5'ten sonra görevi yavaşlatıyor.
+3. **"Manipülasyona açıklık" sorusunun cevabı merceğe bağlı** — sürü düzeyinde
+   dayanıklılık artıyor, tekil müzakere düzeyinde oynaklık artıyor.
+4. **İntent yayını olmadan görev tamamlanamıyor** — N=3 koşularının %20'si.
+5. **P3 (alan atama) en ölçek-duyarlı eksen**; Contract Net ölçekle yön
+   değiştiriyor.
+
 ## Varsayımlar
 
 Plan dokümanı, belirsiz teknik kararlarda durup sormak yerine makul bir varsayım
