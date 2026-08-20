@@ -85,11 +85,12 @@ if(BUILD_TESTING)
       test_region_allocator
       test_interest_points
       test_negotiation_subtree
-      test_assignment_log)
+      test_assignment_log
+      test_subtree_modularity)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()
-  foreach(_xml_test test_bt_xml_variants test_negotiation_subtree)
+  foreach(_xml_test test_bt_xml_variants test_negotiation_subtree test_subtree_modularity)
     target_compile_definitions(${_xml_test} PRIVATE
       SWARM_BT_XML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/bt_xml")
   endforeach()
