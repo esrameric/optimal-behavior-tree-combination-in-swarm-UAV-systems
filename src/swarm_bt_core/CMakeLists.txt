@@ -16,6 +16,8 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/btcpp_prefix_fix.cmake" OPTIONA
 
 find_package(ament_cmake REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
+find_package(yaml_cpp_vendor REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/version.cpp
@@ -23,17 +25,22 @@ add_library(${PROJECT_NAME} SHARED
   src/pheromone_grid.cpp
   src/swarm_state.cpp
   src/encounter_detector.cpp
+  src/experiment_config.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>"
 )
-target_link_libraries(${PROJECT_NAME} PUBLIC behaviortree_cpp::behaviortree_cpp)
+target_link_libraries(${PROJECT_NAME} PUBLIC behaviortree_cpp::behaviortree_cpp yaml-cpp)
 
 # BT.CPP basliklarinda surum makrosu yok; CMake paket surumunu derlemeye gecir.
 target_compile_definitions(${PROJECT_NAME} PRIVATE
   SWARM_BT_BTCPP_VERSION="${behaviortree_cpp_VERSION}"
 )
+
+add_executable(experiment_config_tool src/config_tool_main.cpp)
+target_link_libraries(experiment_config_tool ${PROJECT_NAME})
+install(TARGETS experiment_config_tool DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY bt_xml/ DESTINATION share/${PROJECT_NAME}/bt_xml)
@@ -46,7 +53,7 @@ install(TARGETS ${PROJECT_NAME}
 
 ament_export_include_directories(include)
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies(behaviortree_cpp)
+ament_export_dependencies(behaviortree_cpp yaml_cpp_vendor yaml-cpp)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -60,7 +67,8 @@ if(BUILD_TESTING)
       test_mission_area
       test_pheromone_grid
       test_swarm_state
-      test_encounter_detector)
+      test_encounter_detector
+      test_experiment_config)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()
