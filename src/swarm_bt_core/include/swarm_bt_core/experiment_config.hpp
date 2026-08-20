@@ -74,6 +74,15 @@ struct SimulationParameters
   double pheromone_decay{0.01};   ///< ilgi feromonu tick basina sonumleme orani
   double interest_deposit{1.0};   ///< taranan hucreye birakilan feromon miktari
   double poll_period{5.0};        ///< P6a periyodik yoklama araligi [s]
+
+  /// Droneler gorev alani icinde rastgele (tohumlanmis) konumlardan kalkar.
+  ///
+  /// Kapatilirsa her drone dogrudan kendi seridinin ilk waypoint'ine konur.
+  /// O durumda alan atama problemi ONCEDEN COZULMUS olur: ihaleli algoritmalar
+  /// (P3b Contract Net, P3c CBBA) esit serit bolmesini birebir yeniden uretir
+  /// ve P3 ekseni hicbir sey olcmez. Ayrica koşular arasi tek rastgelelik hiz
+  /// sapmasi kalir, bu da >=10 tekrarin anlamini zayiflatir.
+  bool random_launch{true};
 };
 
 /// Bolum 2.3 - opsiyonel surpriz olay: bir drone'u gorev ortasinda arizalandirma.

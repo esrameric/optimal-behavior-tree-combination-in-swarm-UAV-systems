@@ -112,6 +112,10 @@ public:
   /// Ajanlar kendi seritlerinin ilk waypoint'ine yerlestirilir.
   void assignEqualStrips();
 
+  /// Ajanlari alan icinde tohumlanmis rastgele konumlara yerlestirir.
+  /// Bolge atamasina dokunmaz; yalnizca kalkis geometrisini belirler.
+  void randomizeLaunchPositions(int seed);
+
 private:
   MissionArea area_;
   std::vector<AgentState> agents_;
@@ -124,7 +128,10 @@ private:
 /// Deney konfigurasyonundan baslangic suru durumu uretir.
 ///
 /// Alan ExperimentConfig::missionArea() uzerinden gelir; bu sayede N ile alan
-/// arasinda hicbir bagimlilik olusamaz (plan Bolum 1).
+/// arasinda hicbir bagimlilik olusamaz (plan Bolum 1). Kalkis konumlari
+/// config.sim.random_launch acikken \p seed'den turetilir; bolge atamasi
+/// config.p3'e gore yapilir.
+SwarmState makeSwarmState(const ExperimentConfig & config, int seed);
 SwarmState makeSwarmState(const ExperimentConfig & config);
 
 }  // namespace swarm_bt_core

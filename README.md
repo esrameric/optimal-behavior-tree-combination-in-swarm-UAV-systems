@@ -192,3 +192,24 @@ Devralma **sonrası** oluşan büyük iş yükü dengesizliği (ajan 2: 4181 m, 
 2780 m) takas müzakeresiyle düzeltilemiyor, çünkü iki ajan yine buluşmuyor.
 Bu, P2 (koordinasyon mimarisi) karşılaştırmasının ölçmesi beklenen etkilerden
 biri: merkezi/hiyerarşik mimarilerde bu bilgi buluşma gerektirmeden akar.
+
+### V13 — Rastgele kalkış konumları: P3 ekseninin anlamlı olmasının koşulu
+İlk uygulamada her drone doğrudan kendi şeridinin ilk waypoint'ine konuyordu.
+O durumda alan atama problemi **önceden çözülmüş** oluyor: ihaleli algoritmalar
+(P3b Contract Net, P3c CBBA) eşit şerit bölmesini **birebir yeniden üretiyor**
+ve P3 ekseni OFAT taramasında hiçbir şey ölçmüyordu (test bunu yakaladı).
+
+Dronelar artık görev alanı içinde tohumlanmış rastgele konumlardan kalkıyor
+(`sim.random_launch`, varsayılan açık). Bu iki sorunu birden çözüyor:
+
+1. **P3 ayrışıyor**: P3a şeritleri ajan indeksine göre dağıtır (konum-kör),
+   P3b/P3c tekliflerini gerçek konumlara göre verir. Ölçülen (N=3, 10 tekrar
+   ortalaması): P3a 322.7 s, P3b 311.2 s, P3c 313.7 s.
+2. **Tekrarlar anlam kazanıyor**: önceden koşular arası tek rastgelelik hız
+   sapmasıydı ve görev süresi neredeyse sabitti. Artık 295-340 s arasında
+   gerçek değişkenlik var — planın istediği ≥10 tekrar bir şey ortalıyor.
+
+### V14 — Churn oranı yalnızca karşılaşma kaynaklı değişiklikleri sayar
+Boşta kalan ajanın sahipsiz alanı üstlenmesi (V12) bir karşılaşma sonucu
+değildir. Churn oranının payına dahil edilince oran 1'i aşabiliyordu (test
+yakaladı: 1 churn / 0 karşılaşma). Ayrı `idle_claims` sayacına alındı.

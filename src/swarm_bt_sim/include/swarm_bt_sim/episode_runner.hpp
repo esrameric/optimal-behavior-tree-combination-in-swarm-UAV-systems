@@ -31,6 +31,8 @@ struct EpisodeMetrics
   /// Gercek bir atama degisikligine (takas ya da devralma) yol acan karsilasma
   /// sayisi. Bolum 6'daki churn oraninin payi budur.
   int churn_events{0};
+  /// Karsilasma olmadan, bosta kalan ajanin sahipsiz alani ustlenmesi sayisi.
+  int idle_claims{0};
   double assignment_stability{0.0};  ///< atama kararliligi: ajan basina atama degisikligi
   double churn_ratio{0.0};         ///< gercek degisiklige yol acan karsilasma / toplam
   double coverage_imbalance{0.0};  ///< koşu sonunda kalan alan std sapmasi

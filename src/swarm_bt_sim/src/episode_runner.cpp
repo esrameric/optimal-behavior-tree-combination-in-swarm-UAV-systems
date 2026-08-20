@@ -25,7 +25,7 @@ KinematicSimConfig toSimConfig(const swarm_bt_core::ExperimentConfig & config, i
 
 EpisodeRunner::EpisodeRunner(const swarm_bt_core::ExperimentConfig & config, int seed)
 : config_(config),
-  state_(swarm_bt_core::makeSwarmState(config)),
+  state_(swarm_bt_core::makeSwarmState(config, seed)),
   detector_(config.r_comm, config.encounter_hysteresis),
   negotiator_(config.swap_threshold),
   failure_injector_(config.failure, seed)
@@ -80,7 +80,10 @@ EpisodeMetrics EpisodeRunner::run()
           swarm_bt_core::AreaSwapNegotiator::claimOrphansIfIdle(&state_, agent.id);
         if (claimed > 0) {
           metrics_.orphan_transfers += claimed;
-          ++metrics_.churn_events;
+          // churn_events'e SAYILMAZ: churn orani, karsilasmalarin ne kadarinin
+          // gercek degisiklige yol actigini olcer. Bosta kalan ajanin devralmasi
+          // bir karsilasma sonucu degildir; ayri olarak idle_claims'te tutulur.
+          ++metrics_.idle_claims;
           break;
         }
       }

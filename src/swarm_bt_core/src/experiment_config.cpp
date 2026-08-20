@@ -316,6 +316,7 @@ std::string ExperimentConfig::toYaml() const
       << YAML::Key << "pheromone_decay" << YAML::Value << sim.pheromone_decay
       << YAML::Key << "interest_deposit" << YAML::Value << sim.interest_deposit
       << YAML::Key << "poll_period" << YAML::Value << sim.poll_period
+      << YAML::Key << "random_launch" << YAML::Value << sim.random_launch
       << YAML::EndMap;
 
   out << YAML::Key << "failure" << YAML::Value << YAML::BeginMap
@@ -360,6 +361,7 @@ ExperimentConfig ExperimentConfig::fromYamlString(const std::string & yaml_text)
   readIfPresent(sim, "pheromone_decay", &config.sim.pheromone_decay);
   readIfPresent(sim, "interest_deposit", &config.sim.interest_deposit);
   readIfPresent(sim, "poll_period", &config.sim.poll_period);
+  readIfPresent(sim, "random_launch", &config.sim.random_launch);
 
   const YAML::Node failure = root["failure"];
   readIfPresent(failure, "enabled", &config.failure.enabled);

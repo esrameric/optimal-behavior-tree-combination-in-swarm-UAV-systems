@@ -30,6 +30,7 @@ add_library(${PROJECT_NAME} SHARED
   src/area_swap.cpp
   src/failure_injector.cpp
   src/parameter_space.cpp
+  src/region_allocator.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -77,7 +78,8 @@ if(BUILD_TESTING)
       test_mission_area_invariant
       test_area_swap
       test_failure_injector
-      test_parameter_space)
+      test_parameter_space
+      test_region_allocator)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()

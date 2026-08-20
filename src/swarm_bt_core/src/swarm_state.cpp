@@ -1,10 +1,13 @@
 #include "swarm_bt_core/swarm_state.hpp"
 
 #include <cmath>
+#include <random>
 #include <stdexcept>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "swarm_bt_core/region_allocator.hpp"
 
 namespace swarm_bt_core
 {
@@ -215,12 +218,32 @@ void SwarmState::assignEqualStrips()
   }
 }
 
-SwarmState makeSwarmState(const ExperimentConfig & config)
+void SwarmState::randomizeLaunchPositions(int seed)
+{
+  std::mt19937 rng(static_cast<std::mt19937::result_type>(seed));
+  std::uniform_real_distribution<double> x_axis(0.0, area_.cols() * area_.cellSize());
+  std::uniform_real_distribution<double> y_axis(0.0, area_.rows() * area_.cellSize());
+  for (auto & agent : agents_) {
+    agent.position = Vec2{x_axis(rng), y_axis(rng)};
+  }
+}
+
+SwarmState makeSwarmState(const ExperimentConfig & config, int seed)
 {
   config.validate();
   SwarmState state(config.missionArea(), config.n_agents, config.sim.pheromone_decay);
-  state.assignEqualStrips();
+  if (config.sim.random_launch) {
+    // Kalkis konumlari ATAMADAN ONCE belirlenir: ihaleli algoritmalar
+    // (P3b/P3c) tekliflerini gercek konumlara gore verebilsin.
+    state.randomizeLaunchPositions(seed);
+  }
+  allocateRegions(&state, config.p3, config.sim.random_launch);
   return state;
+}
+
+SwarmState makeSwarmState(const ExperimentConfig & config)
+{
+  return makeSwarmState(config, 0);
 }
 
 }  // namespace swarm_bt_core
