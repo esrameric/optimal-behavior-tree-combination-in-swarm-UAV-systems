@@ -1,0 +1,35 @@
+# --- colcon / ament ---
+build/
+install/
+log/
+
+# --- vendor edilen kaynak bagimliliklar (dependencies.repos ile cekilir) ---
+src/vendor/
+
+# --- C++ ---
+*.o
+*.a
+*.so
+compile_commands.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+
+# --- ROS2 / kayit ---
+*.db3
+*.mcap
+rosbag2_*/
+
+# --- deney ciktilari (buyuk/turetilmis; ozetler experiments/ altinda tutulur) ---
+experiments/raw/
+experiments/**/*.png.tmp
+
+# --- editor / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
