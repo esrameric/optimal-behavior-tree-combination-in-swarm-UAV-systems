@@ -26,6 +26,9 @@ if(BUILD_TESTING)
     SWARM_BT_CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/config")
 
   # Faz 0 altyapi dogrulama scriptinin kendisini sinar (plan Bolum 5/Faz 0).
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_launch_files test/test_launch_files.py TIMEOUT 120)
+
   ament_add_test(test_check_infra
     COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/test/test_check_infra.sh"
     GENERATE_RESULT_FOR_RETURN_CODE_ZERO
