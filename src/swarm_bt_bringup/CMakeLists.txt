@@ -24,6 +24,12 @@ if(BUILD_TESTING)
   ament_target_dependencies(test_config_files swarm_bt_core)
   target_compile_definitions(test_config_files PRIVATE
     SWARM_BT_CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/config")
+
+  # Faz 0 altyapi dogrulama scriptinin kendisini sinar (plan Bolum 5/Faz 0).
+  ament_add_test(test_check_infra
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/test/test_check_infra.sh"
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 60)
 endif()
 
 ament_package()

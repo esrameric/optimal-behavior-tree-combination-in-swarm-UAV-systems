@@ -59,6 +59,12 @@ colcon test && colcon test-result --all
 BT.CPP prefix overlay'i (bkz. Varsayımlar V2) ilk `colcon build` sırasında CMake
 otomatik üretir; elle üretmek için `./tools/setup_btcpp_overlay.sh`.
 
+Altyapının hangi parçasının hazır olduğunu görmek için:
+
+```bash
+./tools/check_infra.sh
+```
+
 > **Not:** Başarısız bir derlemeden sonra CMake cache'i bozulabiliyor
 > (`install/<paket>/share/.../package.sh bulunamadı` hatası). Çözüm:
 > `rm -rf build install log && colcon build --symlink-install`.
