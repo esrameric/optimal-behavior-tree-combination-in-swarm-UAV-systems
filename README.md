@@ -129,3 +129,31 @@ olmaması için" kalibre edilecek).
 `time += dt` biriktirmesi kayan nokta kayması yaratıyor (10 × 0.1 = 0.999...)
 ve zaman sınırı kontrolünü bir tick kaydırıyordu. Simülatör artık zamanı
 `tick_count * dt` olarak yazıyor.
+
+### V8 — Ajan başına tohumlanmış hız sapması eklendi
+`r_comm` kalibrasyonu (Bölüm 1) modelin dejenere olduğunu ortaya çıkardı:
+tüm ajanlar tam olarak aynı hızda uçtuğu için şeritler boyunca **rijit
+formasyonda** kilitleniyor, `r_comm` 20 m'den 140 m'ye çıkarılsa bile karşılaşma
+sayısı hiç değişmiyordu. Ajan başına ±%5 hız sapması (`speed_jitter`,
+tohumlanmış) eklendi. Gerçek dronelar da tam olarak aynı hızda uçmaz; ayrıca
+tohumlanmış olması planın istediği ≥10 tekrarın tekrarlanabilirliğini sağlar.
+
+### V9 — Karşılaşma tespitine histerezis eklendi
+Biçerdöver deseninde bitişik sütunlarda paralel süpüren iki drone arasındaki
+mesafe **tam olarak** hücre boyutunun katıdır ve hız sapmasıyla eşiğin iki
+yanında salınır. Histerezissiz eşik, tek bir yakınlaşmayı 130 sahte
+"karşılaşma"ya bölüyordu — Bölüm 6'nın karşılaşma sıklığı ve churn oranı
+metriklerini tamamen bozacak bir hata. Giriş eşiği `r_comm`, çıkış eşiği
+`r_comm × 1.1` yapıldı. Ayrıntı: [`experiments/calibration_rcomm.md`](experiments/calibration_rcomm.md).
+
+### V10 — Workspace dışından tüketim overlay gerektirir
+`swarm_bt_core`, `behaviortree_cpp`'yi `ament_export_dependencies` ile dışa
+aktardığı için, bu paketleri workspace dışından kullanan bir CMake projesi de
+V2'deki overlay'e ihtiyaç duyar:
+
+```bash
+export CMAKE_PREFIX_PATH="<repo>/.btcpp_overlay:$CMAKE_PREFIX_PATH"
+```
+
+Workspace içinde çalışırken bu gerekmez (her paket `cmake/btcpp_prefix_fix.cmake`
+üzerinden kendisi hallediyor).

@@ -1,6 +1,8 @@
 #ifndef SWARM_BT_SIM__KINEMATIC_SIM_HPP_
 #define SWARM_BT_SIM__KINEMATIC_SIM_HPP_
 
+#include <vector>
+
 #include <swarm_bt_core/swarm_state.hpp>
 
 namespace swarm_bt_sim
@@ -9,8 +11,13 @@ namespace swarm_bt_sim
 /// Faz 1 hafif simulatorun sayisal parametreleri.
 struct KinematicSimConfig
 {
-  /// Sabit ilerleme hizi [m/s]. Ivme/rüzgar modellenmez (plan: kapsam disi).
+  /// Nominal ilerleme hizi [m/s]. Ivme/rüzgar modellenmez (plan: kapsam disi).
   double speed{10.0};
+  /// Ajan basina hiz sapmasi orani; her drone U(1-j, 1+j) carpani alir.
+  /// Sifir olursa ajanlar rijit formasyonda kilitlenir ve hic karsilasma dogmaz.
+  double speed_jitter{0.05};
+  /// Hiz sapmasinin tohumu; ayni tohum ayni koşuyu uretir (tekrarlanabilirlik).
+  int seed{0};
   /// Tick suresi [s].
   double dt{0.1};
   /// Waypoint'e varmis sayilma yaricapi [m].
@@ -52,8 +59,13 @@ private:
   int nextTargetCell(swarm_bt_core::AgentState & agent) const;
   void moveAgent(swarm_bt_core::AgentState & agent);
 
+  /// Ajanin efektif hizi [m/s] (nominal hiz x tohumlanmis sapma carpani).
+  double speedOf(int agent_id) const;
+
   swarm_bt_core::SwarmState * state_;
   KinematicSimConfig config_;
+  /// Ajan basina hiz carpani; kurucu tarafindan bir kez cekilir.
+  std::vector<double> speed_factors_;
   int tick_count_{0};
 };
 

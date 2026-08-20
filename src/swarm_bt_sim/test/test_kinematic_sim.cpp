@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <vector>
+
 #include <swarm_bt_core/encounter_detector.hpp>
 #include <swarm_bt_core/mission_area.hpp>
 #include <swarm_bt_core/swarm_state.hpp>
@@ -46,13 +48,15 @@ TEST(KinematicSim, GecersizParametrelerReddedilir)
   EXPECT_THROW(KinematicSim(state, config), std::invalid_argument);
 }
 
-TEST(KinematicSim, SabitHizlaIlerler)
+TEST(KinematicSim, SapmasizDurumdaTamOlarakNominalHizlaIlerler)
 {
-  // Kapsam disi olan ivme modellenmedigi icin adim uzunlugu tam olarak speed*dt olmali.
+  // Kapsam disi olan ivme modellenmedigi icin, hiz sapmasi kapaliyken adim
+  // uzunlugu tam olarak speed*dt olmali.
   auto state = makeState(1);
   KinematicSimConfig config;
   config.speed = 10.0;
   config.dt = 0.1;
+  config.speed_jitter = 0.0;
   KinematicSim sim(state, config);
 
   // Ilk waypoint zaten ajanin altinda: ilk tick onu tarar, sonraki tickler yol alir.
@@ -60,6 +64,59 @@ TEST(KinematicSim, SabitHizlaIlerler)
   const double before = state.agent(0).distance_travelled;
   sim.step();
   EXPECT_NEAR(state.agent(0).distance_travelled - before, config.speed * config.dt, 1e-9);
+}
+
+TEST(KinematicSim, HizSapmasiAjanBasinaBandIcindeKalir)
+{
+  auto state = makeState(5);
+  KinematicSimConfig config;
+  config.speed = 10.0;
+  config.dt = 0.1;
+  config.speed_jitter = 0.05;
+  config.seed = 3;
+  KinematicSim sim(state, config);
+
+  sim.step();
+  std::vector<double> before;
+  for (const auto & agent : state.agents()) {
+    before.push_back(agent.distance_travelled);
+  }
+  sim.step();
+
+  const double nominal = config.speed * config.dt;
+  for (const auto & agent : state.agents()) {
+    const double step = agent.distance_travelled - before[static_cast<std::size_t>(agent.id)];
+    EXPECT_GE(step, nominal * (1.0 - config.speed_jitter) - 1e-9) << "ajan " << agent.id;
+    EXPECT_LE(step, nominal * (1.0 + config.speed_jitter) + 1e-9) << "ajan " << agent.id;
+  }
+}
+
+TEST(KinematicSim, AyniTohumAyniKoşuyuUretir)
+{
+  // Tekrarlanabilirlik: plan Bolum 5/Faz 1 kombinasyon basina >= 10 tekrar
+  // isterken, tekrarlarin tohumdan turetilmesi sarttir.
+  auto run = [](int seed) {
+      auto state = makeState(5);
+      KinematicSimConfig config;
+      config.speed_jitter = 0.05;
+      config.seed = seed;
+      KinematicSim sim(state, config);
+      runToCompletion(&sim);
+      return state.time();
+    };
+
+  EXPECT_DOUBLE_EQ(run(7), run(7));
+  EXPECT_NE(run(7), run(8));
+}
+
+TEST(KinematicSim, GecersizHizSapmasiReddedilir)
+{
+  auto state = makeState(3);
+  KinematicSimConfig config;
+  config.speed_jitter = -0.1;
+  EXPECT_THROW(KinematicSim(state, config), std::invalid_argument);
+  config.speed_jitter = 1.0;
+  EXPECT_THROW(KinematicSim(state, config), std::invalid_argument);
 }
 
 TEST(KinematicSim, WaypointeVarincaHucreZiyaretEdilirVeFeromonBirakilir)

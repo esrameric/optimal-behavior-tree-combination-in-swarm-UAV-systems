@@ -60,7 +60,12 @@ struct SimulationParameters
 {
   double area_side{400.0};        ///< kare gorev alani kenar uzunlugu [m]
   double cell_size{20.0};         ///< tarama hucresi kenar uzunlugu [m]
-  double speed{10.0};             ///< sabit ucus hizi [m/s]
+  double speed{10.0};             ///< nominal ucus hizi [m/s]
+  /// Ajan basina hiz sapmasi (orani). Her drone hizini U(1-j, 1+j) carpani ile
+  /// alir. Sifir birakilirsa tum ajanlar tam olarak ayni hizda ucar ve seritler
+  /// boyunca RIJIT FORMASYONDA kilitlenir; bu durumda r_comm'un karsilasma
+  /// sikligina hicbir etkisi olmaz (bkz. README Varsayimlar V8).
+  double speed_jitter{0.05};
   double dt{0.1};                 ///< tick suresi [s]
   double time_limit{3000.0};      ///< gorev zaman siniri [s]
   double waypoint_tolerance{0.5};  ///< waypoint'e varmis sayilma yaricapi [m]
@@ -86,7 +91,12 @@ struct FailureInjection
 struct ExperimentConfig
 {
   int n_agents{3};              ///< N in {3, 5}
-  double r_comm{60.0};          ///< iletisim menzili [m]
+  /// Iletisim menzili [m]. Bolum 1'de kalibre edildi: 400 m'lik alanin %15'i.
+  /// Gerekce ve tarama verisi: experiments/calibration_rcomm.md
+  double r_comm{60.0};
+  /// Karsilasma tespitinde cikis esigi carpani (bkz. EncounterDetector).
+  /// Sifirlanirsa esige teget gecen mesafe egrisi sahte karsilasma yagmuru uretir.
+  double encounter_hysteresis{0.1};
   double swap_threshold{0.30};  ///< esik_degeri: dengesizlik takas esigi [0,1]
 
   CoordinationArchitecture p2{CoordinationArchitecture::kDistributed};

@@ -116,3 +116,69 @@ TEST(EncounterDetector, SifirlamaSayaclariTemizler)
   EXPECT_EQ(detector.pairsInRange(), 0u);
   EXPECT_EQ(detector.update(state).size(), 1u);
 }
+
+// --- Histerezis (Bolum 1 kalibrasyonunda ortaya cikan chattering sorunu) ---
+
+TEST(EncounterDetector, NegatifHisterezisReddedilir)
+{
+  EXPECT_THROW(EncounterDetector(50.0, -0.1), std::invalid_argument);
+}
+
+TEST(EncounterDetector, CikisEsigiGirisEsigindenBuyuk)
+{
+  const EncounterDetector detector(50.0, 0.2);
+  EXPECT_DOUBLE_EQ(detector.commRange(), 50.0);
+  EXPECT_DOUBLE_EQ(detector.exitRange(), 60.0);
+}
+
+TEST(EncounterDetector, HisterezisBandindaKalmakCikisSaymaz)
+{
+  EncounterDetector detector(50.0, 0.2);   // giris 50, cikis 60
+  auto state = twoAgentsAt(0.0, 45.0);
+  EXPECT_EQ(detector.update(state).size(), 1u);
+
+  // Giris esiginin uzerine cik ama cikis esigini asma -> hala menzilde.
+  state.agent(1).position = Vec2{55.0, 0.0};
+  EXPECT_TRUE(detector.update(state).empty());
+  EXPECT_EQ(detector.pairsInRange(), 1u);
+
+  // Geri gel -> yeni olay URETILMEMELI (ayni karsilasmanin devami).
+  state.agent(1).position = Vec2{45.0, 0.0};
+  EXPECT_TRUE(detector.update(state).empty());
+  EXPECT_EQ(detector.totalEncounters(), 1);
+}
+
+TEST(EncounterDetector, CikisEsigiAsilincaYeniKarsilasmaMumkun)
+{
+  EncounterDetector detector(50.0, 0.2);
+  auto state = twoAgentsAt(0.0, 45.0);
+  EXPECT_EQ(detector.update(state).size(), 1u);
+
+  state.agent(1).position = Vec2{61.0, 0.0};   // cikis esigini (60) asti
+  EXPECT_TRUE(detector.update(state).empty());
+  EXPECT_EQ(detector.pairsInRange(), 0u);
+
+  state.agent(1).position = Vec2{45.0, 0.0};
+  EXPECT_EQ(detector.update(state).size(), 1u);
+  EXPECT_EQ(detector.totalEncounters(), 2);
+}
+
+TEST(EncounterDetector, EsigeTegetSalinimTekKarsilasmaSayilir)
+{
+  // Bolum 1'de olculen gercek durum: bicerdover deseninde iki drone bitisik
+  // sutunlarda paralel supururken mesafe tam esikte salinir. Histerezissiz
+  // her salinim yeni bir "karsilasma" uretiyordu.
+  EncounterDetector with_hysteresis(20.0, 0.1);
+  EncounterDetector without_hysteresis(20.0, 0.0);
+  auto state = twoAgentsAt(0.0, 20.0);
+
+  for (int i = 0; i < 50; ++i) {
+    // Mesafe 20.00 <-> 20.02 arasinda salinsin (hiz sapmasinin yarattigi etki).
+    state.agent(1).position = Vec2{20.0, (i % 2 == 0) ? 0.0 : 1.0};
+    with_hysteresis.update(state);
+    without_hysteresis.update(state);
+  }
+
+  EXPECT_EQ(with_hysteresis.totalEncounters(), 1);
+  EXPECT_GT(without_hysteresis.totalEncounters(), 10);
+}

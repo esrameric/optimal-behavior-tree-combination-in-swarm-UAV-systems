@@ -40,6 +40,8 @@ void printUsage(const char * program)
     << "  --dt <s>           tick suresi (varsayilan 0.1)\n"
     << "  --time-limit <s>   gorev zaman siniri (varsayilan 3000)\n"
     << "  --decay <0..1>     feromon sonumleme orani (varsayilan 0.01)\n"
+    << "  --jitter <0..1>    ajan basina hiz sapmasi orani (varsayilan 0.05)\n"
+    << "  --seed <int>       rastgelelik tohumu (varsayilan 0)\n"
     << "  --help             bu yardimi goster\n";
 }
 
@@ -54,6 +56,8 @@ bool parseArgs(int argc, char ** argv, Options * options)
     {"--dt", [options](const std::string & v) {options->sim.dt = std::stod(v);}},
     {"--time-limit", [options](const std::string & v) {options->sim.time_limit = std::stod(v);}},
     {"--decay", [options](const std::string & v) {options->pheromone_decay = std::stod(v);}},
+    {"--jitter", [options](const std::string & v) {options->sim.speed_jitter = std::stod(v);}},
+    {"--seed", [options](const std::string & v) {options->sim.seed = std::stoi(v);}},
   };
 
   for (int i = 1; i < argc; ++i) {

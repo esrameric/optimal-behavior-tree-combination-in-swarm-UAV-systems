@@ -186,6 +186,9 @@ void ExperimentConfig::validate() const
   if (sim.speed <= 0.0 || sim.dt <= 0.0) {
     throw std::invalid_argument("hiz ve dt pozitif olmali");
   }
+  if (sim.speed_jitter < 0.0 || sim.speed_jitter >= 1.0) {
+    throw std::invalid_argument("speed_jitter [0,1) araliginda olmali");
+  }
   if (sim.pheromone_decay < 0.0 || sim.pheromone_decay > 1.0) {
     throw std::invalid_argument("pheromone_decay [0,1] araliginda olmali");
   }
@@ -194,6 +197,9 @@ void ExperimentConfig::validate() const
   }
   if (repetitions <= 0) {
     throw std::invalid_argument("repetitions pozitif olmali");
+  }
+  if (encounter_hysteresis < 0.0) {
+    throw std::invalid_argument("encounter_hysteresis negatif olamaz");
   }
   if (r_comm > sim.area_side) {
     throw std::invalid_argument("r_comm gorev alanindan buyuk olamaz");
@@ -212,6 +218,7 @@ std::string ExperimentConfig::toYaml() const
   out << YAML::Key << "N" << YAML::Value << n_agents;
   out << YAML::Key << "r_comm" << YAML::Value << r_comm;
   out << YAML::Key << "esik_degeri" << YAML::Value << swap_threshold;
+  out << YAML::Key << "encounter_hysteresis" << YAML::Value << encounter_hysteresis;
 
   out << YAML::Key << "P2" << YAML::Value << toLetter(p2);
   out << YAML::Key << "P3" << YAML::Value << toLetter(p3);
@@ -223,6 +230,7 @@ std::string ExperimentConfig::toYaml() const
       << YAML::Key << "area_side" << YAML::Value << sim.area_side
       << YAML::Key << "cell_size" << YAML::Value << sim.cell_size
       << YAML::Key << "speed" << YAML::Value << sim.speed
+      << YAML::Key << "speed_jitter" << YAML::Value << sim.speed_jitter
       << YAML::Key << "dt" << YAML::Value << sim.dt
       << YAML::Key << "time_limit" << YAML::Value << sim.time_limit
       << YAML::Key << "waypoint_tolerance" << YAML::Value << sim.waypoint_tolerance
@@ -254,6 +262,7 @@ ExperimentConfig ExperimentConfig::fromYamlString(const std::string & yaml_text)
   readIfPresent(root, "N", &config.n_agents);
   readIfPresent(root, "r_comm", &config.r_comm);
   readIfPresent(root, "esik_degeri", &config.swap_threshold);
+  readIfPresent(root, "encounter_hysteresis", &config.encounter_hysteresis);
 
   if (root["P2"]) {config.p2 = coordinationFromLetter(root["P2"].as<std::string>());}
   if (root["P3"]) {config.p3 = allocationFromLetter(root["P3"].as<std::string>());}
@@ -265,6 +274,7 @@ ExperimentConfig ExperimentConfig::fromYamlString(const std::string & yaml_text)
   readIfPresent(sim, "area_side", &config.sim.area_side);
   readIfPresent(sim, "cell_size", &config.sim.cell_size);
   readIfPresent(sim, "speed", &config.sim.speed);
+  readIfPresent(sim, "speed_jitter", &config.sim.speed_jitter);
   readIfPresent(sim, "dt", &config.sim.dt);
   readIfPresent(sim, "time_limit", &config.sim.time_limit);
   readIfPresent(sim, "waypoint_tolerance", &config.sim.waypoint_tolerance);

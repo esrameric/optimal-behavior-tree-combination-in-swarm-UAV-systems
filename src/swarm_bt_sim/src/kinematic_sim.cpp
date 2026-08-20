@@ -1,5 +1,6 @@
 #include "swarm_bt_sim/kinematic_sim.hpp"
 
+#include <random>
 #include <stdexcept>
 
 namespace swarm_bt_sim
@@ -14,6 +15,23 @@ KinematicSim::KinematicSim(swarm_bt_core::SwarmState & state, const KinematicSim
   if (config.speed <= 0.0 || config.dt <= 0.0) {
     throw std::invalid_argument("KinematicSim: hiz ve dt pozitif olmali");
   }
+  if (config.speed_jitter < 0.0 || config.speed_jitter >= 1.0) {
+    throw std::invalid_argument("KinematicSim: speed_jitter [0,1) araliginda olmali");
+  }
+
+  // Ajan basina hiz carpani, tohumdan tekrarlanabilir sekilde cekilir.
+  std::mt19937 rng(static_cast<std::mt19937::result_type>(config.seed));
+  std::uniform_real_distribution<double> jitter(
+    1.0 - config.speed_jitter, 1.0 + config.speed_jitter);
+  speed_factors_.resize(static_cast<std::size_t>(state.agentCount()));
+  for (auto & factor : speed_factors_) {
+    factor = (config.speed_jitter > 0.0) ? jitter(rng) : 1.0;
+  }
+}
+
+double KinematicSim::speedOf(int agent_id) const
+{
+  return config_.speed * speed_factors_[static_cast<std::size_t>(agent_id)];
 }
 
 int KinematicSim::nextTargetCell(AgentState & agent) const
@@ -39,7 +57,7 @@ void KinematicSim::moveAgent(AgentState & agent)
   const Vec2 target = state_->area().cellCenter(target_cell);
   const Vec2 delta = target - agent.position;
   const double remaining = swarm_bt_core::norm(delta);
-  const double step_length = config_.speed * config_.dt;
+  const double step_length = speedOf(agent.id) * config_.dt;
 
   if (remaining <= step_length || remaining <= config_.waypoint_tolerance) {
     // Hedefe varildi: hucreyi tara, izini birak, siradakine gec.

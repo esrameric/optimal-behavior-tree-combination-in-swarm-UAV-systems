@@ -27,6 +27,9 @@ ament_target_dependencies(${PROJECT_NAME} swarm_bt_core)
 add_executable(sim_runner src/sim_main.cpp)
 target_link_libraries(sim_runner ${PROJECT_NAME})
 
+add_executable(calibrate_rcomm src/calibrate_rcomm_main.cpp)
+target_link_libraries(calibrate_rcomm ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
@@ -34,7 +37,7 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(TARGETS sim_runner DESTINATION lib/${PROJECT_NAME})
+install(TARGETS sim_runner calibrate_rcomm DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)

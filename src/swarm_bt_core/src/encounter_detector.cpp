@@ -8,11 +8,14 @@
 namespace swarm_bt_core
 {
 
-EncounterDetector::EncounterDetector(double r_comm)
-: r_comm_(r_comm)
+EncounterDetector::EncounterDetector(double r_comm, double hysteresis_ratio)
+: r_comm_(r_comm), hysteresis_ratio_(hysteresis_ratio)
 {
   if (r_comm <= 0.0) {
     throw std::invalid_argument("EncounterDetector: r_comm pozitif olmali");
+  }
+  if (hysteresis_ratio < 0.0) {
+    throw std::invalid_argument("EncounterDetector: hysteresis_ratio negatif olamaz");
   }
 }
 
@@ -36,12 +39,19 @@ std::vector<EncounterEvent> EncounterDetector::update(const SwarmState & state)
         continue;
       }
       const double d = distance(agents[i].position, agents[j].position);
-      if (d > r_comm_) {
+      const auto key = orderedPair(agents[i].id, agents[j].id);
+      const bool was_in_range = in_range_.count(key) > 0;
+
+      if (was_in_range) {
+        // Histerezis: cikis esigi asilmadikca cift menzilde sayilir.
+        if (d <= exitRange()) {
+          current.insert(key);
+        }
         continue;
       }
-      const auto key = orderedPair(agents[i].id, agents[j].id);
-      current.insert(key);
-      if (in_range_.count(key) == 0) {
+
+      if (d <= r_comm_) {
+        current.insert(key);
         events.push_back(EncounterEvent{key.first, key.second, state.time(), d});
         ++total_encounters_;
       }

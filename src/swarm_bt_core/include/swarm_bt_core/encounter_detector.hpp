@@ -27,14 +27,30 @@ struct EncounterEvent
 /// Bu, Bolum 6'daki "karsilasma sikligi" metriginin (koşu basina comm-range
 /// giris sayisi) dogru sayilmasi icin gereklidir.
 ///
+/// HISTEREZIS: giris esigi r_comm, cikis esigi r_comm * (1 + hysteresis_ratio).
+/// Histerezissiz bir esik, mesafe egrisi esige TEGET gectiginde saniyeler
+/// icinde onlarca sahte giris uretir: bicerdover deseninde iki drone bitisik
+/// sutunlarda paralel supururken aralarindaki mesafe tam olarak hucre boyutunun
+/// kati kadardir ve hiz sapmasi yuzunden esigin iki yaninda salinir. Olculen
+/// ornek: r_comm=20 m'de tek bir cift 130 kez "karsilasti" (her 2 saniyede bir,
+/// hep d=20.00'da). Histerezis bunu tek bir karsilasmaya indirir ve fiziksel
+/// olarak da dogrudur -- gercek bir telsiz baglantisi da, iki drone arasindaki
+/// muzakere de her iki saniyede bir yeniden kurulmaz.
+///
 /// Ayni sinif hem Faz 1 (hafif simulator) hem Faz 2 (Gazebo) icin kullanilir;
 /// degisen tek sey SwarmState icindeki pozisyonlarin kaynagidir.
 class EncounterDetector
 {
 public:
-  explicit EncounterDetector(double r_comm);
+  /// \param r_comm giris esigi [m]
+  /// \param hysteresis_ratio cikis esigi carpani; 0 verilirse histerezis kapali
+  ///   (chattering'e acik, yalnizca karsilastirma amacli kullanilmali).
+  explicit EncounterDetector(double r_comm, double hysteresis_ratio = 0.1);
 
   double commRange() const {return r_comm_;}
+  double hysteresisRatio() const {return hysteresis_ratio_;}
+  /// Ciftin "menzilden cikti" sayilmasi icin asmasi gereken mesafe.
+  double exitRange() const {return r_comm_ * (1.0 + hysteresis_ratio_);}
 
   /// Bir kontrol adimi calistirir ve YENI karsilasmalari dondurur.
   std::vector<EncounterEvent> update(const SwarmState & state);
@@ -51,6 +67,7 @@ private:
   static std::pair<int, int> orderedPair(int a, int b);
 
   double r_comm_;
+  double hysteresis_ratio_;
   std::set<std::pair<int, int>> in_range_;
   int total_encounters_{0};
 };

@@ -28,9 +28,15 @@ deney_id: P2c_P3c_P4b_P5abc_P6c_N3
 N: 3
 
 # --- Iletisim menzili [m] (plan Bolum 1) -----------------------------------
-# Alan kenar uzunlugunun ~%10-20'si olacak sekilde kalibre edilir.
-# Bu deger Bolum 1'de kalibre edilecek baslangic degeridir.
+# KALIBRE EDILDI: 400 m alanin %15'i. Gerekce ve tarama verisi:
+# experiments/calibration_rcomm.md
 r_comm: 60.0
+
+# --- Karsilasma tespiti histerezisi ----------------------------------------
+# Cikis esigi = r_comm * (1 + encounter_hysteresis). Sifirlanirsa, bicerdover
+# deseninde esige teget gecen mesafe egrisi tek bir yakinlasmayi onlarca sahte
+# karsilasmaya boler (olculdu: 130 kez). Bkz. experiments/calibration_rcomm.md
+encounter_hysteresis: 0.1
 
 # --- Takas tetikleme esigi (plan Bolum 2.2) --------------------------------
 # Iki drone'un kalan alan oranlari arasindaki fark bu esigi asarsa TAKAS
@@ -54,7 +60,8 @@ P6: c
 sim:
   area_side: 400.0          # kare gorev alani kenar uzunlugu [m]
   cell_size: 20.0           # tarama hucresi kenar uzunlugu [m] -> 20x20 = 400 hucre
-  speed: 10.0               # sabit ucus hizi [m/s] (ivme modellenmez)
+  speed: 10.0               # nominal ucus hizi [m/s] (ivme modellenmez)
+  speed_jitter: 0.05        # ajan basina hiz sapmasi orani; 0 -> rijit formasyon
   dt: 0.1                   # tick suresi [s]
   time_limit: 3000.0        # gorev zaman siniri [s]
   waypoint_tolerance: 0.5   # waypoint'e varmis sayilma yaricapi [m]
