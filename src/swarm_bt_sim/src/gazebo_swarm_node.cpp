@@ -155,9 +155,9 @@ public:
     const auto bt_xml_dir = declare_parameter<std::string>("bt_xml_dir", "");
     seed_ = declare_parameter<int>("seed", 0);
 
-    config_ = config_path.empty()
-      ? swarm_bt_core::ExperimentConfig{}
-      : swarm_bt_core::ExperimentConfig::fromYamlFile(config_path);
+    config_ = config_path.empty() ?
+      swarm_bt_core::ExperimentConfig{} :
+    swarm_bt_core::ExperimentConfig::fromYamlFile(config_path);
     const auto agents_override = declare_parameter<int>("n_agents", 0);
     if (agents_override > 0) {
       config_.n_agents = agents_override;
@@ -269,9 +269,9 @@ private:
         swarm_bt_msgs::msg::AssignmentChange change;
         change.stamp = stamp;
         change.agent_id = agent.id;
-        change.reason = agent.alive
-          ? swarm_bt_msgs::msg::AssignmentChange::REASON_AREA_SWAP
-          : swarm_bt_msgs::msg::AssignmentChange::REASON_FAILURE;
+        change.reason = agent.alive ?
+          swarm_bt_msgs::msg::AssignmentChange::REASON_AREA_SWAP :
+          swarm_bt_msgs::msg::AssignmentChange::REASON_FAILURE;
         change.peer_id = -1;
         change.cells_changed = 0;
         change.region_cells = static_cast<int>(agent.region.size());
