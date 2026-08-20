@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>swarm_bt_sim</name>
+  <version>0.0.0</version>
+  <description>Faz 1 hafif 2D kinematik surus simulatoru: waypoint takibi, ikili mesafe/comm-range tespiti, feromon haritasi, BT.CPP tick dongusu.</description>
+  <maintainer email="mericesra01@gmail.com">emeric.topaktas</maintainer>
+  <license>Proprietary</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>swarm_bt_core</depend>
+  <depend>swarm_bt_msgs</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

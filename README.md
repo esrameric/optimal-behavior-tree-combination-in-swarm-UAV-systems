@@ -45,6 +45,24 @@ Kaynak plan: `yapilacaklar_homojen.md` (repo dışı, kullanıcıda).
 └── README.md
 ```
 
+## Kurulum ve Derleme
+
+Ön koşullar (bu makinede kurulu ve doğrulandı): ROS2 Humble, Gazebo Harmonic
+(`ros-humble-ros-gzharmonic`), `ros-humble-behaviortree-cpp` (4.9.1), PX4-Autopilot.
+
+```bash
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+colcon test && colcon test-result --all
+```
+
+BT.CPP prefix overlay'i (bkz. Varsayımlar V2) ilk `colcon build` sırasında CMake
+otomatik üretir; elle üretmek için `./tools/setup_btcpp_overlay.sh`.
+
+> **Not:** Başarısız bir derlemeden sonra CMake cache'i bozulabiliyor
+> (`install/<paket>/share/.../package.sh bulunamadı` hatası). Çözüm:
+> `rm -rf build install log && colcon build --symlink-install`.
+
 ## Varsayımlar
 
 Plan dokümanı, belirsiz teknik kararlarda durup sormak yerine makul bir varsayım
@@ -74,3 +92,18 @@ CMake target adı `behaviortree_cpp::behaviortree_cpp` (bazı dokümanlarda geç
 ### V3 — Git kimliği ve push politikası
 Commit'ler `mericesra01@gmail.com` kimliğiyle ve **yalnızca yerelde** atılır.
 Plan gereği hiçbir aşamada `git push` çalıştırılmaz; push'u kullanıcı yapar.
+
+### V4 — `<license>` tag'i "Proprietary"
+Plan "Lisans: Yok / private" diyor, ancak ROS2 (`catkin_pkg`) boş bir `<license>`
+tag'ini reddediyor ve paket derlenmiyor. Beş paketin tamamında
+`<license>Proprietary</license>` kullanıldı — bu, ROS2 ekosisteminde "açık kaynak
+lisansı yok, özel" anlamına gelen standart ifade. Repoya `LICENSE` dosyası
+eklenmedi.
+
+### V5 — cpplint'in copyright kuralı kapalı
+Lisans dosyası olmadığı için `ament_cpplint` her kaynak dosyayı "No copyright
+message found" ile işaretliyordu. C++ paketlerine `CPPLINT.cfg`
+(`filter=-legal/copyright`) eklendi; cpplint'in geri kalan kuralları (header
+guard, include sırası, satır uzunluğu) ve uncrustify/cppcheck/lint_cmake/xmllint
+tam olarak açık. Faz 0 sonunda tüm lint + test paketi temiz:
+**36 test, 0 hata, 0 başarısızlık**.

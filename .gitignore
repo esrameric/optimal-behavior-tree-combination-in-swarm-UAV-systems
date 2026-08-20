@@ -33,3 +33,6 @@ experiments/**/*.png.tmp
 .idea/
 *.swp
 .DS_Store
+
+# --- BT.CPP prefix overlay (tools/setup_btcpp_overlay.sh ile uretilir) ---
+.btcpp_overlay/
