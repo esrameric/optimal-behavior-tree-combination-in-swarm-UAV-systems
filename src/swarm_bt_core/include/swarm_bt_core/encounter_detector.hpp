@@ -61,6 +61,14 @@ public:
   /// Su an menzil icinde olan cift sayisi.
   std::size_t pairsInRange() const {return in_range_.size();}
 
+  /// Su an menzil icinde olan ciftler.
+  ///
+  /// P6a (periyodik yoklama) ve P6b (her tick kontrol) yalnizca YENI girisleri
+  /// degil, menzilde OLAN tum ciftleri isler: bir cift menzilde kaldigi surece
+  /// koordinasyon karari tekrar tekrar degerlendirilir. P6c (saf
+  /// olay-tetiklemeli) yalnizca update()'in dondurdugu yukselen kenarlari isler.
+  const std::set<std::pair<int, int>> & currentPairs() const {return in_range_;}
+
   void reset();
 
 private:

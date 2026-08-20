@@ -123,6 +123,8 @@ int main(int argc, char ** argv)
               << "kapsama tamam        : " << (metrics.coverage_complete ? "evet" : "hayir") << "\n"
               << "toplam mesafe        : " << metrics.total_distance << " m\n"
               << "karsilasma sikligi   : " << metrics.encounters << "\n"
+              << "koordinasyon karari  : " << metrics.coordination_events << "\n"
+              << "yoklama kontrolu     : " << metrics.detection_checks << "\n"
               << "takas teklifi        : " << metrics.proposals << "\n"
               << "kabul edilen takas   : " << metrics.swaps << "\n"
               << "devralinan hucre     : " << metrics.orphan_transfers << "\n"

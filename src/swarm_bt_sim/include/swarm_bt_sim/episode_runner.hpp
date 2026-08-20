@@ -25,6 +25,18 @@ struct EpisodeMetrics
 
   // --- bu calismaya ozgu metrikler (Bolum 6) ---
   int encounters{0};               ///< karsilasma sikligi: comm-range giris sayisi
+  /// Koordinasyon karari kac kez degerlendirildi (P6'ya gore degisir).
+  /// P6c'de karsilasma sayisina esittir; P6b'de cok daha buyuktur.
+  int coordination_events{0};
+  /// Ikili mesafe kontrolunun kac tick'te calistigi.
+  ///
+  /// P6a'da yoklama araligina gore seyrektir; P6b ve P6c'de her tick calisir.
+  /// P6c ile P6b arasindaki asil fark burada degil coordination_events'tedir:
+  /// P6c yalnizca comm-range GIRISINDE karar verir, P6b menzilde kalindigi
+  /// surece her tick yeniden degerlendirir. (Gercek bir sistemde P6c'nin giris
+  /// tespiti telsiz katmaninda pasif olurdu; simulatorde ayni mesafe hesabi
+  /// kullanildigi icin bu sayac ikisinde de ayni cikar.)
+  int detection_checks{0};
   int proposals{0};                ///< dengesizlik esigini asip teklif kurulan karsilasma
   int swaps{0};                    ///< kabul edilip uygulanan takas sayisi
   int orphan_transfers{0};         ///< arizadan devralinan hucre sayisi
@@ -67,6 +79,12 @@ private:
   /// Bir karsilasmayi isler: once arizadan kalan sahipsiz alan paylasilir,
   /// sonra dengesizlik esigi asilmissa takas degerlendirilir.
   void handleEncounter(int agent_a, int agent_b);
+
+  /// P6 tetikleme modeline gore, bu tick'te hangi ciftlerin islenecegini belirler.
+  void triggerCoordination();
+
+  /// P6a icin: bir sonraki yoklama zamani [s].
+  double next_poll_time_{0.0};
 
   swarm_bt_core::ExperimentConfig config_;
   swarm_bt_core::SwarmState state_;

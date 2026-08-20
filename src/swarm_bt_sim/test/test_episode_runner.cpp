@@ -142,3 +142,87 @@ TEST(EpisodeRunner, GecersizKonfigurasyonReddedilir)
   config.n_agents = 0;
   EXPECT_THROW(EpisodeRunner(config, 0), std::invalid_argument);
 }
+
+// --- P6 tetikleme modelleri (Bolum 3 / Bolum 4 OFAT ekseni) ---
+
+namespace
+{
+swarm_bt_sim::EpisodeMetrics runWithTrigger(swarm_bt_core::TriggerModel model, int seed)
+{
+  ExperimentConfig config;
+  config.p6 = model;
+  config.failure.enabled = true;
+  config.failure.time = -1.0;
+  return EpisodeRunner(config, seed).run();
+}
+}  // namespace
+
+TEST(EpisodeRunner, P6TetiklemeModelleriKoordinasyonSikligiyleAyrisir)
+{
+  // P6b her tick menzildeki tum ciftleri isler -> P6c'den cok daha fazla
+  // koordinasyon karari. Karsilasma SAYISI ise ikisinde de ayni kalmali:
+  // "karsilasma sikligi" comm-range giris sayisidir, karar sayisi degil.
+  int event_driven_coordination = 0;
+  int every_tick_coordination = 0;
+  int event_driven_encounters = 0;
+  int every_tick_encounters = 0;
+
+  for (int seed = 0; seed < 10; ++seed) {
+    const auto event_driven = runWithTrigger(swarm_bt_core::TriggerModel::kEventDriven, seed);
+    const auto every_tick = runWithTrigger(swarm_bt_core::TriggerModel::kEveryTick, seed);
+    event_driven_coordination += event_driven.coordination_events;
+    every_tick_coordination += every_tick.coordination_events;
+    event_driven_encounters += event_driven.encounters;
+    every_tick_encounters += every_tick.encounters;
+  }
+
+  EXPECT_GT(every_tick_coordination, event_driven_coordination);
+  EXPECT_GT(event_driven_encounters, 0);
+}
+
+TEST(EpisodeRunner, P6cKoordinasyonKarariKarsilasmaBasinaBirKez)
+{
+  // Saf olay-tetiklemeli modelde her comm-range girisi tam olarak bir karar.
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto metrics = runWithTrigger(swarm_bt_core::TriggerModel::kEventDriven, seed);
+    EXPECT_EQ(metrics.coordination_events, metrics.encounters) << "tohum " << seed;
+  }
+}
+
+TEST(EpisodeRunner, P6aPeriyodikYoklamaDahaAzKontrolYapar)
+{
+  // Yoklama maliyeti: P6a yalnizca poll_period'da bir bakar.
+  for (int seed = 0; seed < 5; ++seed) {
+    const auto periodic = runWithTrigger(swarm_bt_core::TriggerModel::kPeriodicPolling, seed);
+    const auto every_tick = runWithTrigger(swarm_bt_core::TriggerModel::kEveryTick, seed);
+    EXPECT_LT(periodic.detection_checks, every_tick.detection_checks) << "tohum " << seed;
+  }
+}
+
+TEST(EpisodeRunner, P6aYoklamaArasindaGirenCiftleriKacirabilir)
+{
+  // Ucuz ama kayipli: iki yoklama arasinda girip cikan ciftler hic gorulmez.
+  // Bu, OFAT taramasinda P6 ekseninin olctugu asil odunlesme.
+  int periodic_total = 0;
+  int every_tick_total = 0;
+  for (int seed = 0; seed < 10; ++seed) {
+    periodic_total +=
+      runWithTrigger(swarm_bt_core::TriggerModel::kPeriodicPolling, seed).encounters;
+    every_tick_total += runWithTrigger(swarm_bt_core::TriggerModel::kEveryTick, seed).encounters;
+  }
+  EXPECT_LE(periodic_total, every_tick_total);
+}
+
+TEST(EpisodeRunner, TumP6ModelleriKapsamayiTamamlar)
+{
+  for (const auto model : {
+    swarm_bt_core::TriggerModel::kPeriodicPolling,
+    swarm_bt_core::TriggerModel::kEveryTick,
+    swarm_bt_core::TriggerModel::kEventDriven})
+  {
+    for (int seed = 0; seed < 5; ++seed) {
+      EXPECT_TRUE(runWithTrigger(model, seed).coverage_complete)
+        << "P6" << swarm_bt_core::toLetter(model) << " tohum " << seed;
+    }
+  }
+}
