@@ -22,6 +22,7 @@ find_package(swarm_bt_msgs REQUIRED)
 add_library(${PROJECT_NAME} SHARED
   src/kinematic_sim.cpp
   src/bt_swarm_controller.cpp
+  src/encounter_monitor.cpp
   src/episode_runner.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -47,6 +48,11 @@ add_executable(gazebo_swarm_node src/gazebo_swarm_node.cpp)
 target_link_libraries(gazebo_swarm_node ${PROJECT_NAME})
 ament_target_dependencies(gazebo_swarm_node rclcpp geometry_msgs swarm_bt_msgs)
 
+# Bolum 7 - bagimsiz karsilasma tespiti dugumu.
+add_executable(encounter_detector_node src/encounter_detector_node.cpp)
+target_link_libraries(encounter_detector_node ${PROJECT_NAME})
+ament_target_dependencies(encounter_detector_node rclcpp geometry_msgs swarm_bt_msgs)
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
@@ -54,7 +60,8 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep gazebo_swarm_node
+install(TARGETS sim_runner calibrate_rcomm calibrate_threshold ofat_sweep
+  gazebo_swarm_node encounter_detector_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)
@@ -67,7 +74,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_gtest REQUIRED)
-  foreach(_test test_kinematic_sim test_episode_runner)
+  foreach(_test test_kinematic_sim test_episode_runner test_encounter_monitor)
     # Uctan uca koşu testleri tam simulasyon calistiriyor; varsayilan 60 s
     # zaman asimi yetmiyor.
     ament_add_gtest(${_test} test/${_test}.cpp TIMEOUT 600)
