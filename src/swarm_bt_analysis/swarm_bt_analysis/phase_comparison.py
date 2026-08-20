@@ -6,7 +6,7 @@ Plan Bolum 5/Faz 2 uc sey istiyor:
   2. Karsilasma sikligini logla; N=5'te beklenen artisi dogrula
   3. Kod-seviyesi ile Gazebo sonuclarinin N-DUYARLILIGI ayni yonde mi kontrol et
 
-Bu modul (2)'yi hesaplar; (3) bir sonraki adimda eklenir.
+Bu modul (2) ve (3)'u hesaplar.
 """
 
 from __future__ import annotations
@@ -83,6 +83,84 @@ def encounter_scaling(frame):
     return pd.DataFrame(rows)
 
 
+def scale_direction_agreement(frame, metrics=None):
+    """
+    Plan Bolum 5/Faz 2 (3): iki fazin N-duyarliligi ayni yonde mi.
+
+    Her kombinasyon ve metrik icin, N=3 -> N=5 degisiminin isaretini iki fazda
+    karsilastirir. ``ayni_yon`` False olan satirlar, kod-seviyesi modelin o
+    metrikte Gazebo'yu yanlis yonde tahmin ettigini gosterir.
+    """
+    metrics = metrics or COMPARED_METRICS
+    available = [m for m in metrics if m in frame.columns]
+    means = (
+        frame.groupby(['faz', 'kombinasyon_id', 'N'])[available]
+        .mean().reset_index()
+    )
+
+    rows = []
+    for combination, group in means.groupby('kombinasyon_id'):
+        deltas = {}
+        for phase in (CODE_PHASE, GAZEBO_PHASE):
+            phase_rows = group[group['faz'] == phase]
+            by_scale = {int(row['N']): row for _, row in phase_rows.iterrows()}
+            if len(by_scale) < 2:
+                break
+            low_key, high_key = sorted(by_scale)
+            deltas[phase] = {
+                metric: by_scale[high_key][metric] - by_scale[low_key][metric]
+                for metric in available
+            }
+        if len(deltas) < 2:
+            continue
+
+        for metric in available:
+            code_delta = deltas[CODE_PHASE][metric]
+            gazebo_delta = deltas[GAZEBO_PHASE][metric]
+            rows.append({
+                'kombinasyon_id': combination,
+                'metrik': metric,
+                'delta_kod': code_delta,
+                'delta_gazebo': gazebo_delta,
+                'ayni_yon': _sign(code_delta) == _sign(gazebo_delta),
+                'her_ikisi_de_etkisiz': _sign(code_delta) == 0 and _sign(gazebo_delta) == 0,
+            })
+    return pd.DataFrame(rows)
+
+
+def phase_gap(frame, metrics=None):
+    """
+    Iki faz arasindaki mutlak fark (model dogrulugu olcusu).
+
+    Kod-seviyesi model, Gazebo'yu ne kadar iyi tahmin ediyor? Her metrik icin
+    ortalama bagil sapma.
+    """
+    metrics = metrics or COMPARED_METRICS
+    available = [m for m in metrics if m in frame.columns]
+    means = (
+        frame.groupby(['faz', 'kombinasyon_id', 'N'])[available]
+        .mean().reset_index()
+    )
+
+    rows = []
+    for (combination, n_agents), group in means.groupby(['kombinasyon_id', 'N']):
+        by_phase = {row['faz']: row for _, row in group.iterrows()}
+        if CODE_PHASE not in by_phase or GAZEBO_PHASE not in by_phase:
+            continue
+        record = {'kombinasyon_id': combination, 'N': int(n_agents)}
+        for metric in available:
+            code_value = by_phase[CODE_PHASE][metric]
+            gazebo_value = by_phase[GAZEBO_PHASE][metric]
+            record[f'{metric}_kod'] = code_value
+            record[f'{metric}_gazebo'] = gazebo_value
+            record[f'{metric}_bagil_sapma'] = (
+                abs(gazebo_value - code_value) / abs(code_value)
+                if abs(code_value) > _EPSILON else float('nan')
+            )
+        rows.append(record)
+    return pd.DataFrame(rows)
+
+
 def _sign(value, tolerance=1e-9):
     if value > tolerance:
         return 1
@@ -130,5 +208,26 @@ def build_report(frame):
         'Plan Bölüm 5/Faz 2: "N=5\'te beklenen artışı doğrula, bu confound\'u '
         'raporda açıkça belirt".\n')
     lines.append(_format_table(encounter_scaling(frame)))
+
+    lines.append('\n## 3. İki Fazın N-Duyarlılığı Aynı Yönde mi\n')
+    agreement = scale_direction_agreement(frame)
+    mismatched = agreement[
+        (~agreement['ayni_yon']) & (~agreement['her_ikisi_de_etkisiz'])
+    ]
+    total = len(agreement[~agreement['her_ikisi_de_etkisiz']])
+    lines.append(
+        f'Etkili {total} ölçümün {total - len(mismatched)} tanesinde iki faz '
+        'aynı yönde. Aşağıdaki tabloda **yalnızca uyuşmayanlar** listelenir.\n')
+    lines.append(_format_table(
+        mismatched.drop(columns=['her_ikisi_de_etkisiz']) if not mismatched.empty
+        else mismatched))
+
+    lines.append('\n## 4. Model Doğruluğu (bağıl sapma)\n')
+    lines.append(
+        'Kod-seviyesi model Gazebo\'yu ne kadar iyi tahmin ediyor?\n')
+    gap = phase_gap(frame)
+    columns = ['kombinasyon_id', 'N'] + [
+        c for c in gap.columns if c.endswith('_bagil_sapma')]
+    lines.append(_format_table(gap[columns]))
 
     return '\n'.join(lines) + '\n'

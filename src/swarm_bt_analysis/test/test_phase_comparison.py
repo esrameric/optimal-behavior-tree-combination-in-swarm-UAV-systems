@@ -2,6 +2,7 @@
 
 import io
 
+import pandas as pd
 import pytest
 
 from swarm_bt_analysis import phase_comparison as pc
@@ -60,9 +61,63 @@ def test_karsilasma_sikligi_olcekle_artiyor(campaign):
     assert row['artis_katsayisi'] == pytest.approx(3.0)
 
 
-def test_rapor_bolumleri_icerir(campaign):
+def test_ayni_yonlu_metrikler_isaretlenmez(campaign):
+    agreement = pc.scale_direction_agreement(campaign)
+    row = agreement[
+        (agreement['kombinasyon_id'] == 'A') & (agreement['metrik'] == 'gorev_suresi')
+    ].iloc[0]
+    assert row['delta_kod'] < 0 and row['delta_gazebo'] < 0
+    assert row['ayni_yon']
+
+
+def test_zit_yonlu_metrik_yakalanir(campaign):
+    """Kod-seviyesi model bir metrikte Gazebo'yu ters tahmin ederse gorunmeli."""
+    agreement = pc.scale_direction_agreement(campaign)
+    row = agreement[
+        (agreement['kombinasyon_id'] == 'B') & (agreement['metrik'] == 'churn_orani')
+    ].iloc[0]
+    assert row['delta_kod'] == pytest.approx(0.20)
+    assert row['delta_gazebo'] == pytest.approx(-0.30)
+    assert not row['ayni_yon']
+
+
+def test_iki_tarafta_da_etkisiz_ayri_isaretlenir(campaign):
+    agreement = pc.scale_direction_agreement(campaign)
+    row = agreement[
+        (agreement['kombinasyon_id'] == 'B') & (agreement['metrik'] == 'takas')
+    ].iloc[0]
+    assert row['her_ikisi_de_etkisiz']
+
+
+def test_bagil_sapma_hesaplanir(campaign):
+    gap = pc.phase_gap(campaign)
+    row = gap[(gap['kombinasyon_id'] == 'A') & (gap['N'] == 3)].iloc[0]
+    assert row['gorev_suresi_kod'] == pytest.approx(100.0)
+    assert row['gorev_suresi_gazebo'] == pytest.approx(105.0)
+    assert row['gorev_suresi_bagil_sapma'] == pytest.approx(0.05)
+
+
+def test_sifir_degerli_metrikte_sapma_tanimsiz(campaign):
+    gap = pc.phase_gap(campaign)
+    row = gap[(gap['kombinasyon_id'] == 'A') & (gap['N'] == 3)].iloc[0]
+    assert pd.isna(row['carpisma_bagil_sapma'])
+
+
+def test_tek_fazli_kampanya_karsilastirma_uretmez():
+    frame = pd.DataFrame({
+        'deney_id': ['A_N3', 'A_N5'], 'kombinasyon_id': ['A', 'A'],
+        'faz': ['kod', 'kod'], 'N': [3, 5], 'tohum': [0, 0],
+        'gorev_suresi': [100.0, 50.0], 'kapsama_tamam': [1, 1],
+        'karsilasma': [2, 5],
+    })
+    assert pc.scale_direction_agreement(frame).empty
+    assert pc.phase_gap(frame).empty
+
+
+def test_rapor_dort_bolum_icerir(campaign):
     report = pc.build_report(campaign)
     assert '# Faz 1 ↔ Faz 2 Karşılaştırması' in report
     assert '## 1. Tamamlanma' in report
     assert '## 2. Karşılaşma Sıklığı' in report
-    assert '## 2. Karşılaşma Sıklığı' in report
+    assert '## 3. İki Fazın N-Duyarlılığı' in report
+    assert '## 4. Model Doğruluğu' in report
