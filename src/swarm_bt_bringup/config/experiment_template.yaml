@@ -40,8 +40,11 @@ encounter_hysteresis: 0.1
 
 # --- Takas tetikleme esigi (plan Bolum 2.2) --------------------------------
 # Iki drone'un kalan alan oranlari arasindaki fark bu esigi asarsa TAKAS
-# dali tetiklenir. Cok dusuk -> surekli takas (gurultu); cok yuksek -> hic takas.
-esik_degeri: 0.30
+# dali tetiklenir. Cok dusuk -> bosuna teklif (iletisim yuku); cok yuksek ->
+# hic takas. KALIBRE EDILDI: calisma bandi %5-25, secilen %20.
+# Planin onerdigi %30 bandin DISINDA cikti: takas mekanizmasi kapaniyor ve
+# gorev suresi %4.5 kotulesiyor. Gerekce: experiments/calibration_threshold.md
+esik_degeri: 0.20
 
 # --- Parametre uzayi (plan Bolum 3) ----------------------------------------
 # P2 koordinasyon mimarisi : a=tam merkezi  b=hiyerarsik hibrit  c=tam dagitik

@@ -99,7 +99,11 @@ struct ExperimentConfig
   /// Karsilasma tespitinde cikis esigi carpani (bkz. EncounterDetector).
   /// Sifirlanirsa esige teget gecen mesafe egrisi sahte karsilasma yagmuru uretir.
   double encounter_hysteresis{0.1};
-  double swap_threshold{0.30};  ///< esik_degeri: dengesizlik takas esigi [0,1]
+  /// esik_degeri: dengesizlik takas esigi [0,1]. Bolum 2.2'de kalibre edildi.
+  /// Planin onerdigi 0.30 calisma bandinin DISINDA cikti (takas mekanizmasini
+  /// kapatiyor); band %5-25, secilen deger %20.
+  /// Gerekce ve tarama verisi: experiments/calibration_threshold.md
+  double swap_threshold{0.20};
 
   CoordinationArchitecture p2{CoordinationArchitecture::kDistributed};
   AllocationAlgorithm p3{AllocationAlgorithm::kCbba};
