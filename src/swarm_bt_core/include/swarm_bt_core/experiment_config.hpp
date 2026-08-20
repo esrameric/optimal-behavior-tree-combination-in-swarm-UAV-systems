@@ -118,7 +118,24 @@ struct ExperimentConfig
   int seed{0};
 
   /// Plan Bolum 3 semasi: "P2b_P3c_P4c_P5bc_P6c_N3".
+  ///
+  /// Deney kimligi, calismanin BIRINCIL ANAHTARIDIR: config dosyalarinin adi,
+  /// metrik tablosundaki satir anahtari ve rosbag2 kayitlarinin etiketi hep
+  /// budur. Bu yuzden kimlikten konfigurasyona geri donuş de tanimli olmali
+  /// (fromExperimentId), aksi halde bir metrik satirindan deneyi yeniden
+  /// koşmak icin elle esleme gerekirdi.
   std::string experimentId() const;
+
+  /// Deney kimligini ayristirip konfigurasyona cevirir.
+  ///
+  /// Kimlikte yer ALMAYAN alanlar (r_comm, esik_degeri, simulasyon sayisallari)
+  /// \p defaults degerlerinde birakilir; kimlik yalnizca parametre uzayini
+  /// (P2-P6) ve olcegi (N) tasir.
+  ///
+  /// Bicim bozuksa std::invalid_argument atar.
+  static ExperimentConfig fromExperimentId(const std::string & id);
+  static ExperimentConfig fromExperimentId(
+    const std::string & id, const ExperimentConfig & defaults);
 
   /// Gorev alanini uretir.
   ///

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace swarm_bt_core
 {
@@ -154,6 +155,73 @@ std::string ExperimentConfig::experimentId() const
      << "_P6" << toLetter(p6)
      << "_N" << n_agents;
   return id.str();
+}
+
+namespace
+{
+
+/// "P2b" gibi bir parcadan beklenen on eki dogrulayip harfi cikarir.
+std::string extractLetter(const std::string & token, const std::string & prefix)
+{
+  if (token.rfind(prefix, 0) != 0 || token.size() <= prefix.size()) {
+    throw std::invalid_argument(
+            "Deney kimligi: '" + prefix + "' parcasi beklenirken '" + token + "' bulundu");
+  }
+  return token.substr(prefix.size());
+}
+
+std::vector<std::string> splitOnUnderscore(const std::string & text)
+{
+  std::vector<std::string> tokens;
+  std::string current;
+  for (const char c : text) {
+    if (c == '_') {
+      tokens.push_back(current);
+      current.clear();
+    } else {
+      current += c;
+    }
+  }
+  tokens.push_back(current);
+  return tokens;
+}
+
+}  // namespace
+
+ExperimentConfig ExperimentConfig::fromExperimentId(const std::string & id)
+{
+  return fromExperimentId(id, ExperimentConfig{});
+}
+
+ExperimentConfig ExperimentConfig::fromExperimentId(
+  const std::string & id, const ExperimentConfig & defaults)
+{
+  const auto tokens = splitOnUnderscore(id);
+  if (tokens.size() != 6) {
+    throw std::invalid_argument(
+            "Deney kimligi 6 parca olmali (P2_P3_P4_P5_P6_N), gelen: '" + id + "'");
+  }
+
+  ExperimentConfig config = defaults;
+  config.p2 = coordinationFromLetter(extractLetter(tokens[0], "P2"));
+  config.p3 = allocationFromLetter(extractLetter(tokens[1], "P3"));
+  config.p4 = btArchitectureFromLetter(extractLetter(tokens[2], "P4"));
+  config.p5 = CommunicationMechanisms::fromLetters(extractLetter(tokens[3], "P5"));
+  config.p6 = triggerModelFromLetter(extractLetter(tokens[4], "P6"));
+
+  const std::string agents = extractLetter(tokens[5], "N");
+  try {
+    config.n_agents = std::stoi(agents);
+  } catch (const std::exception &) {
+    throw std::invalid_argument("Deney kimligi: gecersiz N degeri '" + agents + "'");
+  }
+
+  config.validate();
+  if (config.experimentId() != id) {
+    throw std::invalid_argument(
+            "Deney kimligi normalize edilemedi: '" + id + "' -> '" + config.experimentId() + "'");
+  }
+  return config;
 }
 
 MissionArea ExperimentConfig::missionArea() const

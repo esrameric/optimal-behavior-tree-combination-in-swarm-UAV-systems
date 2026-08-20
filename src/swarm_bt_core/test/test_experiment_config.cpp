@@ -129,3 +129,69 @@ TEST(ExperimentConfig, OlmayanDosyaHataVerir)
 {
   EXPECT_THROW(ExperimentConfig::fromYamlFile("/olmayan/yol.yaml"), std::invalid_argument);
 }
+
+// --- Deney kimliginden konfigurasyona geri donuş (Bolum 3) ---
+
+TEST(ExperimentConfig, KimlikGidisDonusKorunur)
+{
+  for (const std::string id : {
+    "P2a_P3a_P4a_P5a_P6a_N3",
+    "P2b_P3c_P4c_P5bc_P6c_N3",
+    "P2c_P3c_P4b_P5abc_P6c_N5",
+    "P2c_P3b_P4b_P5abcd_P6b_N5",
+    "P2a_P3a_P4a_P5none_P6a_N7"})
+  {
+    const auto config = ExperimentConfig::fromExperimentId(id);
+    EXPECT_EQ(config.experimentId(), id);
+  }
+}
+
+TEST(ExperimentConfig, KimlikParametreUzayiniDogruCozer)
+{
+  const auto config = ExperimentConfig::fromExperimentId("P2b_P3c_P4c_P5bc_P6c_N5");
+
+  EXPECT_EQ(config.p2, CoordinationArchitecture::kHierarchicalHybrid);
+  EXPECT_EQ(config.p3, AllocationAlgorithm::kCbba);
+  EXPECT_EQ(config.p4, BtArchitecture::kEventDriven);
+  EXPECT_FALSE(config.p5.direct_message);
+  EXPECT_TRUE(config.p5.stigmergy);
+  EXPECT_TRUE(config.p5.intent_broadcast);
+  EXPECT_EQ(config.p6, TriggerModel::kEventDriven);
+  EXPECT_EQ(config.n_agents, 5);
+}
+
+TEST(ExperimentConfig, KimlikteOlmayanAlanlarVarsayilandaKalir)
+{
+  ExperimentConfig defaults;
+  defaults.r_comm = 77.0;
+  defaults.swap_threshold = 0.11;
+  defaults.sim.area_side = 500.0;
+
+  const auto config = ExperimentConfig::fromExperimentId("P2a_P3a_P4a_P5a_P6a_N3", defaults);
+  EXPECT_DOUBLE_EQ(config.r_comm, 77.0);
+  EXPECT_DOUBLE_EQ(config.swap_threshold, 0.11);
+  EXPECT_DOUBLE_EQ(config.sim.area_side, 500.0);
+}
+
+TEST(ExperimentConfig, BozukKimlikReddedilir)
+{
+  EXPECT_THROW(ExperimentConfig::fromExperimentId(""), std::invalid_argument);
+  EXPECT_THROW(ExperimentConfig::fromExperimentId("P2c_P3c_P4b_P5abc_P6c"), std::invalid_argument);
+  EXPECT_THROW(
+    ExperimentConfig::fromExperimentId("P2c_P3c_P4b_P5abc_P6c_N3_extra"), std::invalid_argument);
+  EXPECT_THROW(
+    ExperimentConfig::fromExperimentId("X2c_P3c_P4b_P5abc_P6c_N3"), std::invalid_argument);
+  EXPECT_THROW(
+    ExperimentConfig::fromExperimentId("P2z_P3c_P4b_P5abc_P6c_N3"), std::invalid_argument);
+  EXPECT_THROW(
+    ExperimentConfig::fromExperimentId("P2c_P3c_P4b_P5abc_P6c_Nx"), std::invalid_argument);
+  EXPECT_THROW(
+    ExperimentConfig::fromExperimentId("P2c_P3c_P4b_P5abc_P6c_N0"), std::invalid_argument);
+}
+
+TEST(ExperimentConfig, KimlikNormalizeEdilemezseReddedilir)
+{
+  // P5 harfleri kanonik sirada olmali; "cb" yazimi "bc" olarak uretilirdi.
+  EXPECT_THROW(
+    ExperimentConfig::fromExperimentId("P2b_P3c_P4c_P5cb_P6c_N3"), std::invalid_argument);
+}

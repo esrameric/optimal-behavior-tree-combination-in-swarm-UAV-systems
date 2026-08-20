@@ -29,6 +29,8 @@ void printUsage(const char * program)
     << "  --area <m>         gorev alani kenar uzunlugu (varsayilan 400)\n"
     << "  --repetitions <n>  tekrar sayisi (varsayilan 10)\n"
     << "  --seed <int>       rastgelelik tohumu (varsayilan 0)\n"
+    << "  --id <deney_id>    tum parametre uzayini kimlikten al, orn.\n"
+    << "                     P2b_P3c_P4c_P5bc_P6c_N3\n"
     << "  --out-dir <dizin>  cikti dizini; verilmezse YAML stdout'a yazilir\n"
     << "  --help             bu yardimi goster\n";
 }
@@ -54,6 +56,9 @@ int main(int argc, char ** argv)
     {"--area", [&](const std::string & v) {config.sim.area_side = std::stod(v);}},
     {"--repetitions", [&](const std::string & v) {config.repetitions = std::stoi(v);}},
     {"--seed", [&](const std::string & v) {config.seed = std::stoi(v);}},
+    {"--id", [&](const std::string & v) {
+        config = swarm_bt_core::ExperimentConfig::fromExperimentId(v, config);
+      }},
     {"--out-dir", [&](const std::string & v) {out_dir = v;}},
   };
 
