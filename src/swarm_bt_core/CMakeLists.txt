@@ -86,7 +86,8 @@ if(BUILD_TESTING)
       test_interest_points
       test_negotiation_subtree
       test_assignment_log
-      test_subtree_modularity)
+      test_subtree_modularity
+      test_calibrated_defaults)
     ament_add_gtest(${_test} test/${_test}.cpp)
     target_link_libraries(${_test} ${PROJECT_NAME})
   endforeach()
