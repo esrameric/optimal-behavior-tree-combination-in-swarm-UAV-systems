@@ -127,6 +127,16 @@ int main(int argc, char ** argv)
       handler->second(argv[++i]);
     }
 
+    // Plan Bolum 5/Faz 1: kombinasyon x olcek basina >= 10 tekrar. Koşular
+    // rastgele kalkis konumlarindan ve hiz sapmasindan etkilendigi icin tek
+    // tohum yaniltici olur.
+    constexpr int kMinRepetitions = 10;
+    if (repetitions < kMinRepetitions) {
+      std::cerr << "UYARI: tekrar sayisi " << repetitions << " < " << kMinRepetitions
+                << ". Plan Bolum 5/Faz 1 en az " << kMinRepetitions
+                << " tekrar istiyor; sonuclar yayinlanabilir degil.\n";
+    }
+
     auto baseline = swarm_bt_core::baselineConfig();
     baseline.failure.enabled = with_failure;
     baseline.failure.time = -1.0;    // gorev ortasi

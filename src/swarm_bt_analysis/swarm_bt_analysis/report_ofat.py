@@ -62,6 +62,20 @@ def build_report(frame):
         lines.append(f'- Kombinasyon x olcek basina tekrar: {int(frame["tekrar"].iloc[0])}')
     lines.append('')
 
+    # --- 0. Tekrar denetimi (plan Bolum 5/Faz 1) ---
+    repetitions = ofat.repetition_report(frame)
+    insufficient = repetitions[~repetitions['yeterli']]
+    lines.append('## 0. Tekrar Denetimi\n')
+    if insufficient.empty:
+        lines.append(
+            f'Tum {len(repetitions)} (kombinasyon, olcek) cifti en az '
+            f'{ofat.MIN_REPETITIONS} tekrar iceriyor.\n')
+    else:
+        lines.append(
+            f'**UYARI:** {len(insufficient)} cift {ofat.MIN_REPETITIONS} tekrarin '
+            'altinda; asagidaki sonuclar guvenilir degil.\n')
+        lines.append(_format_table(insufficient, '{:.0f}'))
+
     # --- 1. Yon catismalari: planin aradigi asil bulgu ---
     agreement = ofat.direction_agreement(frame)
     columns = ['kombinasyon_id', 'degisen_eksen', 'metrik',

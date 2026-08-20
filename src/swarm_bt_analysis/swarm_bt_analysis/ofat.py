@@ -29,6 +29,11 @@ CORE_METRICS = [
 #: Kucuk paydalarda oransal degisimin patlamasini onleyen esik.
 _EPSILON = 1e-9
 
+#: Plan Bolum 5/Faz 1: her kombinasyon x olcek icin en az bu kadar tekrar.
+#: Koşular rastgele kalkis konumlarindan ve hiz sapmasindan etkilendigi icin
+#: tek bir tohum yaniltici; ortalama alinabilmesi buna bagli.
+MIN_REPETITIONS = 10
+
 
 def load_sweep(path):
     """OFAT tarama CSV'sini okur ve tip donuşumlerini yapar."""
@@ -38,6 +43,48 @@ def load_sweep(path):
     if missing:
         raise ValueError(f'CSV eksik sutun iceriyor: {sorted(missing)}')
     return frame
+
+
+def repetition_report(frame, minimum=MIN_REPETITIONS):
+    """
+    Her (kombinasyon, olcek) ciftinin tekrar sayisini denetler.
+
+    Donen tabloda ``yeterli`` sutunu False olan satirlar plan Bolum 5/Faz 1'in
+    ">= 10 tekrar" sartini saglamiyor demektir.
+    """
+    if 'tekrar' not in frame.columns:
+        raise ValueError("CSV 'tekrar' sutunu icermiyor: tekrar sayisi denetlenemez")
+
+    rows = []
+    for (combination, n_agents), group in frame.groupby(['kombinasyon_id', 'N']):
+        repetitions = int(group['tekrar'].min())
+        rows.append({
+            'kombinasyon_id': combination,
+            'N': int(n_agents),
+            'tekrar': repetitions,
+            'yeterli': repetitions >= minimum,
+        })
+    return pd.DataFrame(rows).sort_values(['yeterli', 'kombinasyon_id', 'N'])
+
+
+def assert_enough_repetitions(frame, minimum=MIN_REPETITIONS):
+    """
+    Yetersiz tekrar iceren satir varsa ValueError atar.
+
+    Analiz zincirinin basinda cagrilir: yetersiz tekrarla uretilmis bir
+    tabloya dayanan sonuclar yayinlanmamali.
+    """
+    report = repetition_report(frame, minimum)
+    insufficient = report[~report['yeterli']]
+    if not insufficient.empty:
+        detail = ', '.join(
+            f"{row['kombinasyon_id']}@N={row['N']}({row['tekrar']})"
+            for _, row in insufficient.iterrows()
+        )
+        raise ValueError(
+            f'{len(insufficient)} satir {minimum} tekrarin altinda: {detail}'
+        )
+    return report
 
 
 def baseline_combination(frame):

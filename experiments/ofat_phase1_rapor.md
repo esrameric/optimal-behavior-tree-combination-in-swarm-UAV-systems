@@ -6,6 +6,10 @@
 - Toplam satir: 32
 - Kombinasyon x olcek basina tekrar: 10
 
+## 0. Tekrar Denetimi
+
+Tum 32 (kombinasyon, olcek) cifti en az 10 tekrar iceriyor.
+
 ## 1. Olcege Duyarli Parametreler (yon CATISMASI)
 
 Plan Bolum 4: bir parametre degisimi iki N degerinde ZIT yonde etki ediyorsa, o parametre olcege duyarlidir — bulgunun kendisi budur.

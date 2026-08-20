@@ -182,3 +182,48 @@ def test_tek_tarafli_etki_isaretlenir():
     assert row['delta_N5'] == pytest.approx(5.0)
     assert not row['zit_yon']
     assert row['tek_tarafli_etki']
+
+
+def test_tekrar_denetimi_yeterli_satirlari_isaretler(sweep):
+    """Her (kombinasyon, olcek) cifti icin tekrar sayisi raporlanmali."""
+    report = ofat.repetition_report(sweep)
+    assert set(report.columns) == {'kombinasyon_id', 'N', 'tekrar', 'yeterli'}
+    assert len(report) == 4          # 2 kombinasyon x 2 olcek
+    assert report['yeterli'].all()   # ornek tabloda tekrar = 10
+
+
+def test_yetersiz_tekrar_yakalanir():
+    """Plan Bolum 5/Faz 1: kombinasyon x olcek basina >= 10 tekrar."""
+    frame = pd.DataFrame({
+        'deney_id': ['A_N3', 'A_N5'],
+        'kombinasyon_id': ['A', 'A'],
+        'N': [3, 5],
+        'tekrar': [10, 4],
+        'P2': ['c', 'c'], 'P3': ['c', 'c'], 'P4': ['b', 'b'],
+        'P5': ['abc', 'abc'], 'P6': ['c', 'c'],
+        'gorev_tamamlama_suresi': [100.0, 50.0],
+    })
+    report = ofat.repetition_report(frame)
+    assert not report['yeterli'].all()
+
+    with pytest.raises(ValueError, match='tekrarin altinda'):
+        ofat.assert_enough_repetitions(frame)
+
+
+def test_yeterli_tekrar_hata_vermez(sweep):
+    ofat.assert_enough_repetitions(sweep)
+
+
+def test_tekrar_sutunu_yoksa_hata_verir():
+    frame = pd.DataFrame({
+        'deney_id': ['A_N3'], 'kombinasyon_id': ['A'], 'N': [3],
+        'P2': ['c'], 'P3': ['c'], 'P4': ['b'], 'P5': ['abc'], 'P6': ['c'],
+    })
+    with pytest.raises(ValueError, match="'tekrar' sutunu"):
+        ofat.repetition_report(frame)
+
+
+def test_esik_ozellestirilebilir(sweep):
+    """Daha yuksek bir esikle denetim yapilabilmeli."""
+    with pytest.raises(ValueError, match='tekrarin altinda'):
+        ofat.assert_enough_repetitions(sweep, minimum=20)
